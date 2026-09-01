@@ -920,6 +920,23 @@ function initDevPanel() {
 }
 
 /* ---------------- 알 상세 (사용자가 직접 눌렀을 때만) ---------------- */
+/** 이 알을 뽑은 사람 전원 (신화·전설만 기록된다) */
+function whoBlock(rec) {
+  if (!rec.who || !rec.who.length) return '';
+  const list = rec.who.slice().sort((a, b) => b.c - a.c);
+  return (
+    '<div class="reveal-who">' +
+    '<div class="rw-h">뽑은 사람 전원 <span>' + list.length + '명</span></div>' +
+    '<div class="rw-list">' +
+    list
+      .map((w) =>
+        byTag({ k: w.k, n: w.n }).replace('</span>', (w.c > 1 ? ' &times;' + w.c : '') + '</span>')
+      )
+      .join('') +
+    '</div></div>'
+  );
+}
+
 function showEggDetail(egg) {
   const rec = state.owned[egg.id];
   if (!rec) return;
@@ -937,6 +954,7 @@ function showEggDetail(egg) {
     '<div><span class="ck">처음 뽑은 주인공</span><b>' + esc(byText(rec.by)) + '</b></div>' +
     (rec.c > 1 ? '<div><span class="ck">마지막으로 뽑은 사람</span><b>' + esc(byText(rec.lastBy)) + '</b></div>' : '') +
     '</div>' +
+    whoBlock(rec) +
     '<p class="reveal-meta">보유 <b>' + nf(rec.c) + '</b>개 &middot; 처음 만난 날 ' +
     new Date(rec.first).toLocaleDateString('ko-KR') + '</p>' +
     '<button class="reveal-btn" type="button">닫기</button>';
@@ -986,30 +1004,6 @@ function renderBag() {
   el.bagGrid.innerHTML = ids.map((id) => eggCell(EGG_BY_ID[id], state.owned[id].c, false, true)).join('');
 }
 
-/** 도감의 신화·전설 한 줄 — 그 알을 뽑은 사람 전원 */
-function dexHiRow(egg) {
-  const rec = state.owned[egg.id];
-  const t = tierOf(egg);
-  if (!rec) {
-    return (
-      '<div class="dex-row locked" style="--tc:' + t.color + '">' + eggSvg(egg) +
-      '<div class="dex-row-body"><div class="dex-row-name">???</div>' +
-      '<div class="who-none">아직 아무도 못 뽑았습니다</div></div></div>'
-    );
-  }
-  const list = (rec.who || []).slice().sort((a, b) => b.c - a.c);
-  const chips = list.length
-    ? list.map((w) => byTag({ k: w.k, n: w.n }).replace('</span>', (w.c > 1 ? ' &times;' + w.c : '') + '</span>')).join('')
-    : byTag(rec.by);
-  return (
-    '<div class="dex-row" style="--tc:' + t.color + '" data-egg="' + egg.id + '">' + eggSvg(egg) +
-    '<div class="dex-row-body">' +
-    '<div class="dex-row-name">' + esc(egg.name) + '<span class="q">' + nf(rec.c) + '개</span></div>' +
-    '<div class="who-list">' + chips + '</div>' +
-    '</div></div>'
-  );
-}
-
 function renderDex() {
   const owned = ownedIds().length;
   el.dexOwned.textContent = owned;
@@ -1022,18 +1016,12 @@ function renderDex() {
     .map((t) => {
       const pool = EGGS_BY_TIER[t.key];
       const have = pool.filter((e) => state.owned[e.id]).length;
-      const head =
+      return (
         '<div class="dex-group" style="--tc:' + t.color + '">' +
         '<div class="dex-group-head"><span class="bar"></span>' +
         '<span style="color:' + t.color + '">' + t.name + '</span>' +
-        '<span class="n">' + have + ' / ' + pool.length + '</span></div>';
-
-      // 신화·전설은 누가 뽑았는지 전부 보여준다
-      if (tierIdx(t.key) >= WHO_LIST_FROM) {
-        return head + '<div class="dex-hi">' + pool.map((e) => dexHiRow(e)).join('') + '</div></div>';
-      }
-      return (
-        head + '<div class="egg-grid">' +
+        '<span class="n">' + have + ' / ' + pool.length + '</span></div>' +
+        '<div class="egg-grid">' +
         pool.map((e) => eggCell(e, state.owned[e.id] ? state.owned[e.id].c : 0, !state.owned[e.id])).join('') +
         '</div></div>'
       );

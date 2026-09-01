@@ -553,26 +553,6 @@ button,select,input{font:inherit;color:inherit}
 .dex-group-head .bar{width:3px;height:13px;border-radius:2px;background:var(--tc)}
 .dex-group-head .n{margin-left:auto;color:var(--muted);font-weight:600;font-variant-numeric:tabular-nums}
 
-/* 신화·전설은 뽑은 사람을 전부 보여준다 (칸 대신 가로 줄) */
-.dex-hi{display:flex;flex-direction:column;gap:7px}
-.dex-row{
-  display:flex;align-items:flex-start;gap:11px;padding:9px 11px;border-radius:12px;
-  background:var(--surface-2);border:1px solid var(--line);cursor:pointer;transition:.15s;
-}
-.dex-row:hover{border-color:var(--tc);box-shadow:0 6px 18px rgba(0,0,0,.32)}
-.dex-row.locked{opacity:.4;cursor:default}
-.dex-row.locked:hover{border-color:var(--line);box-shadow:none}
-.dex-row .egg{width:34px;height:auto;flex:none;filter:drop-shadow(0 4px 8px rgba(0,0,0,.45))}
-.dex-row.locked .egg{filter:brightness(0) saturate(0) opacity(.34)}
-.dex-row-body{flex:1;min-width:0}
-.dex-row-name{display:flex;align-items:baseline;gap:7px;font-size:13px;font-weight:800;color:#e9dfc9}
-.dex-row-name .q{font-size:11px;font-weight:700;color:var(--gold);font-variant-numeric:tabular-nums}
-.dex-row .who-list{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}
-.dex-row .who-list .by{
-  display:inline-block;width:auto;margin:0;padding:3px 8px;border-radius:7px;font-size:10.5px;
-}
-.dex-row .who-none{margin-top:5px;font-size:10.5px;color:#6f6553}
-
 /* ═══════════ 기록 ═══════════ */
 .stat-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
 .stat{background:var(--surface-2);border:1px solid var(--line);border-radius:var(--r);padding:11px 12px}
@@ -713,6 +693,17 @@ button,select,input{font:inherit;color:inherit}
 .reveal-credit div{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
 .reveal-credit .ck{font-size:11px;color:var(--muted);white-space:nowrap}
 .reveal-credit b{font-size:14.5px;font-weight:900;color:#8ef0ae;text-align:right;word-break:keep-all}
+.reveal-who{
+  margin-top:10px;padding:11px 13px;border-radius:12px;
+  background:rgba(0,0,0,.3);border:1px solid var(--line);text-align:left;
+}
+.rw-h{
+  display:flex;align-items:baseline;gap:7px;margin-bottom:8px;
+  font-size:11px;font-weight:800;letter-spacing:.06em;color:var(--muted);
+}
+.rw-h span{color:var(--gold);font-weight:900}
+.rw-list{display:flex;flex-wrap:wrap;gap:5px}
+.rw-list .by{display:inline-block;width:auto;margin:0;padding:4px 9px;border-radius:7px;font-size:11px}
 .reveal-meta{margin:14px 0 0;font-size:12px;color:var(--muted)}
 .reveal-meta b{color:var(--gold)}
 .reveal-btn{
