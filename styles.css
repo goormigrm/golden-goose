@@ -145,13 +145,14 @@ button,select,input{font:inherit;color:inherit}
   font-variant-numeric:tabular-nums;white-space:nowrap;flex:none;
 }
 .don-now .who{max-width:12em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:none}
-.don-now .arw{opacity:.65;flex:none}
-.don-now .gain{font-variant-numeric:tabular-nums;white-space:nowrap;flex:none}
-.don-now .now-bar{
-  flex:1;min-width:48px;height:7px;border-radius:99px;
-  background:rgba(4,36,15,.26);overflow:hidden;display:block;
+.don-now .msg{
+  flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  font-weight:700;color:rgba(4,36,15,.78);
 }
-.don-now .now-bar i{display:block;height:100%;width:0;background:rgba(255,255,255,.92);border-radius:99px}
+.don-now .gain{
+  flex:none;margin-left:auto;white-space:nowrap;font-variant-numeric:tabular-nums;
+  background:rgba(4,36,15,.22);border-radius:8px;padding:3px 10px;
+}
 
 .don-idle{
   flex:1;min-width:0;margin:0;font-size:13px;color:rgba(200,216,205,.5);
@@ -294,9 +295,13 @@ button,select,input{font:inherit;color:inherit}
 .h-sub{margin-left:auto;font-size:11.5px;font-weight:600;color:var(--muted);letter-spacing:0}
 .h-sub b{color:var(--gold);font-weight:800;font-variant-numeric:tabular-nums}
 #bagSort{
-  background:var(--surface-2);border:1px solid var(--line);border-radius:8px;
-  padding:4px 7px;font-size:11.5px;cursor:pointer;letter-spacing:0;
+  background:#2a2419;border:1px solid var(--line-2);border-radius:8px;
+  padding:6px 9px;font-size:13px;font-weight:800;color:#f7ecd6;
+  cursor:pointer;letter-spacing:0;
 }
+#bagSort:hover{border-color:var(--gold);color:var(--gold)}
+#bagSort:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+#bagSort option{background:#1e1a13;color:#f3ece0;font-weight:700}
 .dex-pct{color:var(--gold);font-weight:900;font-size:12px;letter-spacing:0}
 
 .scroll-y{overflow-y:auto;overflow-x:hidden;padding-right:5px}
@@ -327,6 +332,8 @@ button,select,input{font:inherit;color:inherit}
   background:none;border:0;padding:0;cursor:pointer;
   width:min(384px,78vw);display:block;position:relative;z-index:2;
   filter:drop-shadow(0 24px 28px rgba(0,0,0,.5));
+  user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;
+  touch-action:manipulation;
 }
 .goose{width:100%;height:auto;display:block}
 .goose-btn:focus-visible{outline:2px solid var(--gold);outline-offset:10px;border-radius:24px}

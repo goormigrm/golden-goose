@@ -54,7 +54,7 @@ const el = {
   donNowAmt: $('donNowAmt'),
   donNowWho: $('donNowWho'),
   donNowGain: $('donNowGain'),
-  donNowBar: $('donNowBar'),
+  donNowMsg: $('donNowMsg'),
   donIdle: $('donIdle'),
   donWait: $('donWait'),
   donWaitN: $('donWaitN'),
@@ -472,7 +472,7 @@ function handleDonation(d) {
   state.don.clicks += gain;
   state.don.feed.unshift({ t: Date.now(), nick: d.nick, message: d.message, gained: gain > 0 });
 
-  if (gain > 0) donQueue.push({ nick: d.nick, amount: d.amount, gain: gain });
+  if (gain > 0) donQueue.push({ nick: d.nick, amount: d.amount, gain: gain, msg: d.message || '' });
   renderDonations();
   needRender = true; // '받은 후원' 타일도 같이 갱신
   save(true);
@@ -485,7 +485,7 @@ function startNextDonation() {
   if (!d) return;
   // 뒤에 밀린 게 많을수록 빠르게 넘긴다 (그래도 한 건도 건너뛰지 않는다)
   const dur = Math.max(DON_SHOW_MIN, DON_SHOW - donQueue.length * 260);
-  donActive = { nick: d.nick, amount: d.amount, gain: d.gain, left: d.gain, acc: 0, dur: dur, t: 0 };
+  donActive = { nick: d.nick, amount: d.amount, msg: d.msg, gain: d.gain, left: d.gain, acc: 0, dur: dur, t: 0 };
   sfxDonation();
 }
 
@@ -536,9 +536,9 @@ function renderNow() {
   el.donNow.hidden = false;
   el.donNowAmt.textContent = nf(a.amount) + '원';
   el.donNowWho.textContent = a.nick;
+  el.donNowMsg.textContent = a.msg || '';
   const done = a.gain - a.left;
   el.donNowGain.textContent = '쓰다듬기 ' + nf(done) + ' / ' + nf(a.gain) + '회';
-  el.donNowBar.style.width = (a.gain ? (done / a.gain) * 100 : 100) + '%';
   el.donWait.hidden = donQueue.length === 0;
   if (donQueue.length) el.donWaitN.textContent = nf(donQueue.length);
 }
@@ -729,6 +729,8 @@ function renderAll() {
 /* ---------------- 루프 ---------------- */
 let lastTick = performance.now();
 let statTick = 0;
+let lastRender = 0;
+const RENDER_MIN_GAP = 250; // ms
 
 function tick(now) {
   const dt = Math.min(1000, now - lastTick);
@@ -755,8 +757,10 @@ function tick(now) {
   for (let i = 0; i < clickLog.length; i++) per += clickLog[i][1];
   el.cps.textContent = per.toFixed(1);
 
-  if (needRender) {
+  // 알이 자주 나올 때 도감 34칸을 매번 다시 그리면 모바일에서 눈에 띄게 버벅인다
+  if (needRender && now - lastRender > RENDER_MIN_GAP) {
     needRender = false;
+    lastRender = now;
     renderGold();
     renderBag();
     renderDex();
@@ -812,7 +816,16 @@ function init() {
   renderAll();
   renderRates();
 
-  el.goose.addEventListener('click', handClick);
+  // 모바일에서 click 은 브라우저가 연타를 탭 제스처로 묶어버려 초당 10회쯤에서 막힌다.
+  // pointerdown 은 손가락이 닿는 즉시 그대로 들어오므로 연타가 제한되지 않는다.
+  el.goose.addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    handClick(e);
+  });
+  // 키보드(Enter/Space)로 누른 경우만 click 으로 받는다 (마우스 클릭은 위에서 이미 처리됨)
+  el.goose.addEventListener('click', (e) => {
+    if (e.detail === 0) handClick(e);
+  });
 
   // 알 상세 — 둥지/도감에서 직접 눌렀을 때만
   document.addEventListener('click', (e) => {
