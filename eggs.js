@@ -3,14 +3,16 @@
  * 이 파일은 데이터만 담는다. 게임 규칙은 game.js.
  * ============================================================ */
 
-/** 등급표. weight = 알을 낳을 때 이 등급이 뽑힐 확률(%) */
+/** 등급표. weight = 알을 낳을 때 이 등급이 뽑힐 확률(%)
+ *  도감 34종 완성이 보통 30분 안에 끝나도록 맞춘 값. 가장 희소한 신화는 종당 0.33%.
+ *  숫자를 바꾸면 완성 시간이 통째로 바뀐다 — HANDOVER.md "밸런스" 절 참고. */
 const TIERS = [
-  { key: 'common',    name: '일반',   en: 'COMMON',    color: '#9aa7b8', weight: 60   },
-  { key: 'uncommon',  name: '고급',   en: 'UNCOMMON',  color: '#4ade80', weight: 25   },
-  { key: 'rare',      name: '희귀',   en: 'RARE',      color: '#38bdf8', weight: 10   },
-  { key: 'epic',      name: '영웅',   en: 'EPIC',      color: '#c084fc', weight: 4    },
-  { key: 'legendary', name: '전설',   en: 'LEGENDARY', color: '#fbbf24', weight: 0.9  },
-  { key: 'mythic',    name: '신화',   en: 'MYTHIC',    color: '#fb7185', weight: 0.1  },
+  { key: 'common',    name: '일반',   en: 'COMMON',    color: '#9aa7b8', weight: 45 },
+  { key: 'uncommon',  name: '고급',   en: 'UNCOMMON',  color: '#4ade80', weight: 26 },
+  { key: 'rare',      name: '희귀',   en: 'RARE',      color: '#38bdf8', weight: 17 },
+  { key: 'epic',      name: '영웅',   en: 'EPIC',      color: '#c084fc', weight: 8  },
+  { key: 'legendary', name: '전설',   en: 'LEGENDARY', color: '#fbbf24', weight: 3  },
+  { key: 'mythic',    name: '신화',   en: 'MYTHIC',    color: '#fb7185', weight: 1  },
 ];
 
 const TIER_BY_KEY = Object.fromEntries(TIERS.map((t) => [t.key, t]));

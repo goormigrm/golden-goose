@@ -63,6 +63,11 @@ const el = {
   chzLogin: $('chzLoginBtn'),
   chzLogout: $('chzLogoutBtn'),
   chzStatus: $('chzStatus'),
+
+  demoBtn: $('demoBtn'),
+  demoPop: $('demoPop'),
+  demoAmt: $('demoAmt'),
+  demoSend: $('demoSend'),
 };
 
 /* ---------------- 상태 ---------------- */
@@ -253,7 +258,8 @@ function layEggs(n, source) {
 }
 
 /* ---------------- 획득 알림 (클릭을 막지 않음) ---------------- */
-const HOLD_BY_TIER = [3600, 4000, 4800, 5600, 6600, 7600]; // ms
+// 알이 분당 20개쯤 나오므로 낮은 등급은 짧게 스쳐 지나가게 한다
+const HOLD_BY_TIER = [2600, 3000, 3800, 5000, 6500, 8000]; // ms
 
 function pushCard(html, tierColor, hold) {
   const d = document.createElement('div');
@@ -409,16 +415,131 @@ function handleDonation(d) {
   save(true);
 }
 
-/** 도착 순간에만 금액을 보여주고 사라진다. 누적 금액은 어디에도 남기지 않는다. */
+/* 도착 순간에만 금액을 보여주고 사라진다. 누적 금액은 어디에도 남기지 않는다.
+ * 후원이 몰아칠 때 배너가 쌓여 카운터를 가리지 않도록 **한 줄로 합쳐서** 갱신한다. */
+let bannerEl = null;
+let bannerExtra = 0;
+let bannerTimer = null;
+
 function donationBanner(d, gain) {
-  const b = document.createElement('div');
-  b.className = 'don-banner';
-  b.innerHTML =
+  if (bannerEl) bannerExtra += 1;
+  else {
+    bannerExtra = 0;
+    bannerEl = document.createElement('div');
+    bannerEl.className = 'don-banner';
+    el.bannerSlot.appendChild(bannerEl);
+  }
+  bannerEl.innerHTML =
     '<span class="amt">' + nf(d.amount) + '원</span>' +
     '<span class="who">' + esc(d.nick) + '</span>' +
-    '<span>&rarr; 쓰다듬기 ' + nf(gain) + '회!</span>';
-  el.bannerSlot.appendChild(b);
-  setTimeout(() => b.remove(), 5000);
+    '<span>&rarr; 쓰다듬기 ' + nf(gain) + '회!</span>' +
+    (bannerExtra ? '<span class="more">외 ' + nf(bannerExtra) + '명</span>' : '');
+  bannerEl.classList.remove('bump');
+  void bannerEl.offsetWidth;
+  bannerEl.classList.add('bump');
+
+  clearTimeout(bannerTimer);
+  const b = bannerEl;
+  bannerTimer = setTimeout(() => {
+    b.classList.add('out');
+    setTimeout(() => b.remove(), 450);
+    bannerEl = null;
+    bannerExtra = 0;
+  }, 3600);
+}
+
+/* ---------------- 데모 후원 (게임 소개용) ----------------
+ * 실제 후원과 완전히 같은 경로(handleDonation)로 흘러간다.
+ * 닉네임·메시지·금액을 매번 새로 뽑아서 같은 화면이 두 번 나오지 않게 한다. */
+const DEMO_NICKS = [
+  '구르미', '거위대장', '노른자', '알사랑', '흰둥이', '금손', '밤샘러', '후원요정',
+  '팬1호', '거위밥', '황금손', '수심이', '알까기장인', '깃털수집가', '24K충성',
+  '새벽감성', '치킨은사랑', '오리아님', '골드바가자', '거위신도', '알못', '두근두근',
+  '퇴근했다', '월급날', '한입만', '거위럽', '순금러', '삐약이', '털뭉치', '꽥꽥',
+];
+const DEMO_MSGS = [
+  '거위야 힘내라', '알 좀 낳아봐', '24K 나와라', '신화 뜰 때까지 간다', '오늘도 쓰담쓰담',
+  '손목 조심하세요', '거위신 강림 기원', '금 모으는 중', '팬이에요!', '알 낳는 소리 좋다',
+  '골드바 가자', '도감 다 채우자', '이 거위 순하네', '한 판만 더', '퇴근 기념',
+  '알 부자 되세요', '쓰다듬기 대신 해드림', '거위 살쪘나', '전설 좀 주세요', '',
+  '', '', '방금 입금했습니다', '오늘 방송 재밌어요', '황금알 낳아라 얍',
+];
+// 소액이 자주, 고액은 가끔 — 실제 후원 분포와 비슷하게
+const DEMO_AMOUNTS = [
+  1000, 1000, 1000, 1000, 1000, 2000, 2000, 2000, 3000, 3000,
+  3000, 5000, 5000, 5000, 7000, 10000, 10000, 15000, 20000, 30000,
+];
+const DEMO_BIG = [50000, 70000, 100000, 150000, 200000, 300000, 500000, 1000000];
+
+const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
+let demoSeq = 0;
+
+function demoDonate(amount) {
+  demoSeq += 1;
+  handleDonation({
+    id: 'demo|' + Date.now() + '|' + demoSeq + '|' + Math.random().toString(36).slice(2),
+    nick: pick(DEMO_NICKS),
+    amount: amount != null ? amount : pick(DEMO_AMOUNTS),
+    message: pick(DEMO_MSGS),
+    isVideo: false,
+  });
+}
+
+/** n건을 불규칙한 간격으로 흘려보낸다 — 실제 방송에서 몰아치는 느낌 */
+function demoBurst(n) {
+  let delay = 0;
+  for (let i = 0; i < n; i++) {
+    setTimeout(demoDonate, delay);
+    delay += 260 + Math.random() * 900;
+  }
+}
+
+function toggleDemoPop(force) {
+  const open = force != null ? force : el.demoPop.hidden;
+  el.demoPop.hidden = !open;
+}
+
+/** 데모 버튼 노출 여부. 방송에 이 버튼을 아예 안 띄우고 싶으면 주소에 ?demo=0 을 한 번 붙이면
+ *  이 브라우저에서 계속 숨는다. 다시 켜려면 ?demo=1. */
+function demoVisible() {
+  const q = new URLSearchParams(location.search).get('demo');
+  if (q === '0') localStorage.setItem('gg:demo-off', '1');
+  if (q === '1') localStorage.removeItem('gg:demo-off');
+  if (q !== null && !new URLSearchParams(location.search).get('code')) {
+    history.replaceState(null, '', location.pathname);
+  }
+  return localStorage.getItem('gg:demo-off') !== '1';
+}
+
+function initDemo() {
+  if (!el.demoBtn) return;
+  if (!demoVisible()) {
+    el.demoBtn.parentElement.hidden = true;
+    return;
+  }
+  el.demoBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    toggleDemoPop();
+  });
+  el.demoPop.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const b = e.target.closest('[data-demo]');
+    if (!b) return;
+    const v = b.dataset.demo;
+    if (v === 'big') demoDonate(pick(DEMO_BIG));
+    else demoBurst(Number(v));
+  });
+  el.demoSend.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const v = Math.floor(Number(el.demoAmt.value));
+    if (!isFinite(v) || v < 0) return;
+    demoDonate(v);
+    el.demoAmt.value = '';
+  });
+  el.demoAmt.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') el.demoSend.click();
+  });
+  document.addEventListener('click', () => toggleDemoPop(false));
 }
 
 /* ---------------- 알 상세 (사용자가 직접 눌렀을 때만) ---------------- */
@@ -706,8 +827,13 @@ function init() {
     if (e.target.classList.contains('reveal-btn') || e.target.classList.contains('reveal-bg')) closeReveal();
   });
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') closeReveal();
+    if (e.key === 'Escape') {
+      closeReveal();
+      toggleDemoPop(false);
+    }
   });
+
+  initDemo();
 
   el.soundBtn.addEventListener('click', () => {
     state.sound = !state.sound;
@@ -751,6 +877,7 @@ document.addEventListener('DOMContentLoaded', init);
 window.__gg = {
   state: () => state,
   lay: (n) => layEggs(n || 1, 'timer'),
+  demo: (n) => demoBurst(n || 1),
   donate: (won, nick, msg) =>
     handleDonation({
       id: 'dbg|' + Date.now() + '|' + Math.random(),
