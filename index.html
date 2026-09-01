@@ -7,7 +7,7 @@
 <meta name="description" content="순금 24K 황금알을 낳는 거위. 쓰다듬고, 기다리고, 도감을 채우는 수집형 클리커." />
 <meta name="theme-color" content="#12100c" />
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 114'%3E%3Cpath d='M50 6C74 6 93 40 93 66 93 92 74 108 50 108 26 108 7 92 7 66 7 40 26 6 50 6Z' fill='%23ffd84d'/%3E%3C/svg%3E" />
-<link rel="stylesheet" href="styles.css?v=9" />
+<link rel="stylesheet" href="styles.css?v=15" />
 </head>
 <body>
 
@@ -78,6 +78,12 @@
       <h2 class="block-h">알 등급 확률</h2>
       <table class="rates" id="ratesTable"></table>
       <p class="note">등급이 먼저 정해지고, 같은 등급 안에서는 모든 알이 같은 확률로 나옵니다.</p>
+    </div>
+
+    <div class="block">
+      <h2 class="block-h">순금 <span class="k24-ink">24K</span> 알</h2>
+      <p class="note">아래 알들은 <b>순도 999.9의 24K 순금</b>입니다. 등급이 높을수록 함유량이 늘어납니다.</p>
+      <div class="k24-list" id="k24List"></div>
     </div>
 
   </section>
@@ -198,12 +204,6 @@
       <div class="dex-bar"><div class="dex-fill" id="dexFill"></div></div>
       <div class="scroll-y dex-scroll"><div class="dex-body" id="dexBody"></div></div>
     </div>
-
-    <div class="block">
-      <h2 class="block-h">순금 <span class="k24-ink">24K</span> 알</h2>
-      <p class="note">아래 알들은 <b>순도 999.9의 24K 순금</b>입니다. 등급이 높을수록 함유량이 늘어납니다.</p>
-      <div class="k24-list" id="k24List"></div>
-    </div>
   </section>
 </main>
 
@@ -226,9 +226,9 @@
 </div>
 
 <script src="vendor/socket.io-2.5.0.slim.js"></script>
-<script src="config.js?v=9"></script>
-<script src="eggs.js?v=9"></script>
-<script src="chzzk.js?v=9"></script>
-<script src="game.js?v=9"></script>
+<script src="config.js?v=15"></script>
+<script src="eggs.js?v=15"></script>
+<script src="chzzk.js?v=15"></script>
+<script src="game.js?v=15"></script>
 </body>
 </html>

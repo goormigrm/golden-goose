@@ -135,9 +135,10 @@ button,select,input{font:inherit;color:inherit}
   position:sticky;top:59px;z-index:25;
   display:flex;align-items:center;gap:18px;
   padding:15px clamp(14px,2.4vw,30px);
-  background:linear-gradient(100deg,rgba(0,199,60,.16),rgba(0,199,60,.05) 42%,rgba(0,199,60,.02));
-  border-bottom:1px solid rgba(0,199,60,.28);
-  backdrop-filter:blur(10px);
+  background:
+    linear-gradient(100deg,rgba(0,199,60,.17),rgba(0,199,60,.055) 42%,rgba(0,199,60,.02)),
+    #14120c;
+  border-bottom:1px solid rgba(0,199,60,.3);
 }
 .donband-rule{display:flex;align-items:center;gap:10px;flex:none}
 .chz-dot{
@@ -205,8 +206,37 @@ button,select,input{font:inherit;color:inherit}
 .col-mid{grid-area:mid}
 .col-right{grid-area:right}
 
+/* PC에서는 페이지 자체가 스크롤되지 않는다.
+   상단바·후원 밴드는 항상 제자리에 있고, 각 칸이 자기 안에서만 스크롤된다.
+   → 기록·둥지 같은 내용이 밴드 밑으로 밀려 들어가 겹치는 일이 없다. */
 @media (min-width:1241px){
-  .mid-inner{position:sticky;top:150px}
+  body{height:100vh;overflow:hidden}
+  .topbar,.donband{position:static}
+  .deck{min-height:0;overflow:hidden;align-items:stretch}
+  .col{height:100%;overflow-y:auto;overscroll-behavior:contain;padding-right:6px}
+  .col::-webkit-scrollbar{width:7px}
+  .col::-webkit-scrollbar-thumb{background:rgba(255,225,160,.15);border-radius:8px}
+  .col::-webkit-scrollbar-thumb:hover{background:rgba(255,225,160,.26)}
+  .col-mid{align-items:center}
+  .mid-inner{position:static;gap:7px}
+  /* 세로가 짧은 화면에서 타이머가 잘리지 않도록 거위가 화면 높이에 맞춰 줄어든다 */
+  .mid-inner .goose-btn{width:min(384px,78vw,36vh)}
+  .mid-inner .count{font-size:clamp(38px,5.2vh,72px)}
+  .mid-inner .count-label{font-size:11.5px}
+  .mid-inner .timer-hint{margin-top:7px}
+
+  /* 오른쪽 칸은 둥지·도감이 남은 높이를 나눠 갖는다 → 칸 안에 또 스크롤이 생기지 않는다 */
+  .col-right{display:flex;flex-direction:column;overflow:hidden;padding-right:0}
+  .col-right .block{display:flex;flex-direction:column;min-height:0}
+  /* 둥지가 주력, 도감은 잠깐 확인용 → 세로를 대략 2:1로 나눈다 */
+  .col-right .block:first-child{flex:2 1 0;min-height:0}
+  .col-right .block:last-child{flex:1 1 0;min-height:176px}
+  .col-right .bag-scroll,.col-right .dex-scroll{max-height:none;flex:1 1 auto;min-height:0}
+}
+
+/* 좁은 화면에서는 페이지가 통째로 스크롤되므로 밴드도 같이 흘러간다 (겹침 방지) */
+@media (max-width:1240px){
+  .donband{position:static}
 }
 @media (max-width:1240px){
   .deck{
@@ -396,6 +426,21 @@ button,select,input{font:inherit;color:inherit}
   background:rgba(0,0,0,.62);border:1px solid var(--line);border-radius:99px;
   font-size:10px;font-weight:800;color:var(--gold);
 }
+/* 이름표 — 이 알을 누가 뽑았는지 */
+.egg-cell .by{
+  display:block;width:100%;margin-top:3px;padding:4px 5px;border-radius:7px;
+  font-size:11px;font-weight:900;line-height:1.2;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.by i{font-style:normal;font-size:9px;opacity:.72;margin-right:4px;letter-spacing:.06em}
+.by.don{background:rgba(0,199,60,.2);border:1px solid rgba(0,199,60,.45);color:#8ef0ae}
+.by.hand{background:rgba(255,201,77,.16);border:1px solid rgba(255,201,77,.38);color:#ffd97a}
+.by.goose{background:rgba(255,255,255,.06);border:1px solid var(--line);color:#a99a80}
+.by.big{
+  display:inline-block;width:auto;margin-top:7px;padding:5px 11px;border-radius:9px;font-size:12.5px;
+}
+.bag-scroll .egg-grid{grid-template-columns:repeat(auto-fill,minmax(100px,1fr))}
+
 .egg-cell .k24-tag{
   position:absolute;bottom:4px;right:4px;padding:1px 4px;border-radius:4px;
   background:linear-gradient(140deg,#fff0b8,#ffc94d 40%,#c9820b);
@@ -564,6 +609,14 @@ button,select,input{font:inherit;color:inherit}
   border-color:rgba(255,201,77,.42);color:#f7e2b0;font-weight:700;
 }
 .reveal-mat.is-k24 b{color:var(--gold);font-weight:900;letter-spacing:.04em}
+.reveal-credit{
+  margin-top:15px;display:flex;flex-direction:column;gap:8px;
+  padding:12px 13px;border-radius:12px;
+  background:rgba(0,0,0,.3);border:1px solid var(--line);
+}
+.reveal-credit div{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+.reveal-credit .ck{font-size:11px;color:var(--muted);white-space:nowrap}
+.reveal-credit b{font-size:14.5px;font-weight:900;color:#8ef0ae;text-align:right;word-break:keep-all}
 .reveal-meta{margin:14px 0 0;font-size:12px;color:var(--muted)}
 .reveal-meta b{color:var(--gold)}
 .reveal-btn{

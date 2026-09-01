@@ -224,26 +224,48 @@ function sfxDonation() {
 /* ---------------- 획득 ---------------- */
 let needRender = false; // 렌더는 프레임당 한 번으로 모은다
 
-function addEgg(egg) {
+/* 이 알을 누가 뽑았는지(공로자). 후원으로 굴러간 쓰다듬기에서 나온 알은 그 후원자 몫이다.
+ *   { k:'don', n:'닉네임' } | { k:'hand' } | { k:'goose' } */
+const CREDIT_HAND = { k: 'hand' };
+const CREDIT_GOOSE = { k: 'goose' };
+
+function byTag(by, big) {
+  if (!by) return '';
+  const cls = 'by ' + by.k + (big ? ' big' : '');
+  if (by.k === 'don') return '<span class="' + cls + '"><i>후원</i>' + esc(by.n) + '</span>';
+  if (by.k === 'hand') return '<span class="' + cls + '">쓰다듬기</span>';
+  return '<span class="' + cls + '">거위가 스스로</span>';
+}
+
+function byText(by) {
+  if (!by) return '기록 없음';
+  if (by.k === 'don') return by.n + ' 님의 후원';
+  if (by.k === 'hand') return '직접 쓰다듬기';
+  return '거위가 스스로';
+}
+
+function addEgg(egg, credit) {
   const now = Date.now();
   const rec = state.owned[egg.id];
   const isNew = !rec;
-  if (isNew) state.owned[egg.id] = { c: 1, first: now, last: now };
+  if (isNew) state.owned[egg.id] = { c: 1, first: now, last: now, by: credit, lastBy: credit };
   else {
     rec.c += 1;
     rec.last = now;
+    rec.lastBy = credit;
+    if (!rec.by) rec.by = credit; // 예전 세이브 보정
   }
   state.drops += 1;
   return isNew;
 }
 
 /** n개를 낳는다. source: 'timer' | 'click' | 'offline' */
-function layEggs(n, source) {
+function layEggs(n, source, credit) {
   if (n <= 0) return;
   const got = [];
   for (let i = 0; i < n; i++) {
     const e = rollEgg();
-    got.push({ egg: e, isNew: addEgg(e) });
+    got.push({ egg: e, isNew: addEgg(e, credit) });
   }
   needRender = true;
   save();
@@ -261,7 +283,7 @@ function layEggs(n, source) {
     .slice(0, EGG_FX_MAX)
     .forEach((x, i) => eggBurst(x.egg, i));
 
-  notifyDrop(got, source, best);
+  notifyDrop(got, source, best, credit);
 }
 
 /* ---------------- 획득 알림 (클릭을 막지 않음) ---------------- */
@@ -292,7 +314,7 @@ function goldLine(egg) {
   return egg.k24 ? ' &middot; <span class="k24">순금 ' + fmtGram(egg.gram) + '</span>' : '';
 }
 
-function notifyDrop(list, source, best) {
+function notifyDrop(list, source, best, credit) {
   const bi = tierIdx(best.egg.tier);
   const hold = HOLD_BY_TIER[bi] || 4000;
 
@@ -306,6 +328,7 @@ function notifyDrop(list, source, best) {
         '<span class="dc-tier">' + t.en + ' &middot; ' + t.name + '</span>' +
         '<b class="dc-name">' + esc(egg.name) + '</b>' +
         '<span class="dc-meta">보유 ' + nf(state.owned[egg.id].c) + '개' + goldLine(egg) + '</span>' +
+        byTag(credit, true) +
         '</div>' +
         (isNew ? '<span class="dc-new">NEW</span>' : ''),
       t.color,
@@ -330,6 +353,7 @@ function notifyDrop(list, source, best) {
         '<b class="dc-name">알 ' + nf(list.length) + '개를 낳아뒀습니다</b>' +
         '<div class="dc-mini">' + shown.map((id) => eggSvg(EGG_BY_ID[id])).join('') +
         (rest > 0 ? '<span>+' + rest + '종</span>' : '') + '</div>' +
+        byTag(credit, true) +
         '</div>' +
         (newCount ? '<span class="dc-new">NEW ' + newCount + '</span>' : ''),
       t.color,
@@ -344,16 +368,16 @@ function notifyDrop(list, source, best) {
 /* ---------------- 클릭 ---------------- */
 let clickLog = []; // [시각, 횟수]
 
-function applyClicks(n) {
+function applyClicks(n, credit) {
   state.clicks += n;
   let drops = 0;
   for (let i = 0; i < n; i++) if (Math.random() < CLICK_DROP_CHANCE) drops++;
   el.clickCount.textContent = nf(state.clicks);
-  if (drops > 0) layEggs(drops, 'click');
+  if (drops > 0) layEggs(drops, 'click', credit);
 }
 
 function handClick(ev) {
-  applyClicks(1);
+  applyClicks(1, CREDIT_HAND);
   clickLog.push([performance.now(), 1]);
   sfxClick();
 
@@ -417,8 +441,11 @@ function feather(x, y) {
   setTimeout(() => d.remove(), 1550);
 }
 
-/* ---------------- 치지직 후원 → 자동 쓰다듬기 ---------------- */
-let autoQueue = 0;
+/* ---------------- 치지직 후원 → 자동 쓰다듬기 ----------------
+ * 후원자별로 묶어서 대기시킨다. 그래야 그 쓰다듬기에서 나온 알에
+ * "OO 님의 후원" 이름표를 정확히 붙일 수 있다. */
+let autoQueue = []; // [{ nick, left }]
+let autoLeft = 0;
 
 function clicksForAmount(amount) {
   return Math.floor(amount / DONATION_UNIT) * CLICKS_PER_1000;
@@ -438,7 +465,8 @@ function handleDonation(d) {
   state.don.feed.unshift({ t: Date.now(), nick: d.nick, message: d.message, gained: gain > 0 });
 
   if (gain > 0) {
-    autoQueue += gain;
+    autoQueue.push({ nick: d.nick, left: gain });
+    autoLeft += gain;
     sfxDonation();
     donationBanner(d, gain);
   }
@@ -593,6 +621,10 @@ function showEggDetail(egg) {
     (egg.k24
       ? '<div class="reveal-mat is-k24">재질 &middot; <b>' + esc(egg.mat) + '</b><br>순금 함유량 ' + fmtGram(egg.gram) + '</div>'
       : '<div class="reveal-mat">재질 &middot; ' + esc(egg.mat) + '</div>') +
+    '<div class="reveal-credit">' +
+    '<div><span class="ck">처음 뽑은 주인공</span><b>' + esc(byText(rec.by)) + '</b></div>' +
+    (rec.c > 1 ? '<div><span class="ck">마지막으로 뽑은 사람</span><b>' + esc(byText(rec.lastBy)) + '</b></div>' : '') +
+    '</div>' +
     '<p class="reveal-meta">보유 <b>' + nf(rec.c) + '</b>개 &middot; 처음 만난 날 ' +
     new Date(rec.first).toLocaleDateString('ko-KR') + '</p>' +
     '<button class="reveal-btn" type="button">닫기</button>';
@@ -604,8 +636,9 @@ function closeReveal() {
 }
 
 /* ---------------- 렌더 ---------------- */
-function eggCell(egg, count, locked) {
+function eggCell(egg, count, locked, showBy) {
   const t = tierOf(egg);
+  const rec = state.owned[egg.id];
   return (
     '<div class="egg-cell' + (locked ? ' locked' : '') + '" style="--tc:' + t.color + '"' +
     (locked ? '' : ' data-egg="' + egg.id + '"') + '>' +
@@ -613,6 +646,7 @@ function eggCell(egg, count, locked) {
     (count ? '<span class="cnt">' + nf(count) + '</span>' : '') +
     eggSvg(egg) +
     '<span class="en">' + (locked ? '???' : esc(egg.name)) + '</span>' +
+    (showBy && !locked && rec ? byTag(rec.by) : '') +
     (egg.k24 ? '<span class="k24-tag">24K</span>' : '') +
     '</div>'
   );
@@ -637,7 +671,7 @@ function renderBag() {
     const d = tierIdx(EGG_BY_ID[b].tier) - tierIdx(EGG_BY_ID[a].tier);
     return d !== 0 ? d : state.owned[b].c - state.owned[a].c;
   });
-  el.bagGrid.innerHTML = ids.map((id) => eggCell(EGG_BY_ID[id], state.owned[id].c, false)).join('');
+  el.bagGrid.innerHTML = ids.map((id) => eggCell(EGG_BY_ID[id], state.owned[id].c, false, true)).join('');
 }
 
 function renderDex() {
@@ -764,23 +798,32 @@ function tick(now) {
     state.progress -= DROP_INTERVAL;
     lay++;
   }
-  if (lay > 0) layEggs(lay, 'timer');
+  if (lay > 0) layEggs(lay, 'timer', CREDIT_GOOSE);
 
   el.timerText.textContent = fmtClock(DROP_INTERVAL - state.progress);
   el.timerFill.style.width = (state.progress / DROP_INTERVAL) * 100 + '%';
 
   // 후원 자동 쓰다듬기 소진 (많이 들어와도 6초 안에 다 처리)
-  if (autoQueue > 0) {
-    const rate = Math.max(20, Math.ceil(autoQueue / 6));
-    const n = Math.max(1, Math.min(autoQueue, Math.round((rate * dt) / 1000)));
-    autoQueue -= n;
-    applyClicks(n);
-    clickLog.push([now, n]);
+  if (autoLeft > 0) {
+    const rate = Math.max(20, Math.ceil(autoLeft / 6));
+    let n = Math.max(1, Math.min(autoLeft, Math.round((rate * dt) / 1000)));
+    const want = n;
+    while (n > 0 && autoQueue.length) {
+      const b = autoQueue[0];
+      const take = Math.min(n, b.left);
+      b.left -= take;
+      n -= take;
+      autoLeft -= take;
+      applyClicks(take, { k: 'don', n: b.nick }); // 이 쓰다듬기의 공로자
+      if (b.left <= 0) autoQueue.shift();
+    }
+    const spent = want - n;
+    if (spent > 0) clickLog.push([now, spent]);
     if (Math.random() < 0.4) {
       const r = el.fx.getBoundingClientRect();
-      popText('+' + n, r.width * (0.3 + Math.random() * 0.4), r.height * (0.3 + Math.random() * 0.3));
+      popText('+' + spent, r.width * (0.3 + Math.random() * 0.4), r.height * (0.3 + Math.random() * 0.3));
     }
-    if (autoQueue === 0) {
+    if (autoLeft === 0) {
       needRender = true;
       save(true);
     }
@@ -882,7 +925,8 @@ function init() {
     if (!confirm('모은 알과 기록이 모두 사라집니다. 정말 처음부터 다시 시작할까요?')) return;
     localStorage.removeItem(SAVE_KEY);
     state = freshState();
-    autoQueue = 0;
+    autoQueue = [];
+    autoLeft = 0;
     renderAll();
     save(true);
   });
@@ -902,7 +946,7 @@ function init() {
   });
   setInterval(() => save(true), 15000);
 
-  if (offline > 0) setTimeout(() => layEggs(offline, 'offline'), 500);
+  if (offline > 0) setTimeout(() => layEggs(offline, 'offline', CREDIT_GOOSE), 500);
 
   requestAnimationFrame(tick);
   initChzzk();
@@ -913,7 +957,7 @@ document.addEventListener('DOMContentLoaded', init);
 // 콘솔 전용 디버그 (화면에는 노출하지 않는다)
 window.__gg = {
   state: () => state,
-  lay: (n) => layEggs(n || 1, 'timer'),
+  lay: (n) => layEggs(n || 1, 'timer', CREDIT_GOOSE),
   demo: (n) => demoBurst(n || 1),
   donate: (won, nick, msg) =>
     handleDonation({
