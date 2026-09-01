@@ -7,7 +7,7 @@
 <meta name="description" content="순금 24K 황금알을 낳는 거위. 쓰다듬고, 기다리고, 도감을 채우는 수집형 클리커." />
 <meta name="theme-color" content="#12100c" />
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 114'%3E%3Cpath d='M50 6C74 6 93 40 93 66 93 92 74 108 50 108 26 108 7 92 7 66 7 40 26 6 50 6Z' fill='%23ffd84d'/%3E%3C/svg%3E" />
-<link rel="stylesheet" href="styles.css?v=18" />
+<link rel="stylesheet" href="styles.css?v=20" />
 </head>
 <body>
 
@@ -25,25 +25,8 @@
     <span class="chz-status" id="chzStatus" data-s="off">연동 꺼짐</span>
     <button class="chz-btn" id="chzLoginBtn" type="button">치지직 로그인</button>
     <button class="chz-btn ghost" id="chzLogoutBtn" type="button" hidden>로그아웃</button>
-    <div class="demo-wrap">
-      <button class="icon-btn" id="demoBtn" type="button" title="데모 후원" aria-label="데모 후원">&#127916;</button>
-      <div class="demo-pop" id="demoPop" hidden>
-        <div class="demo-h">데모 후원</div>
-        <div class="demo-row">
-          <button class="demo-b" data-demo="1" type="button">랜덤 1건</button>
-          <button class="demo-b" data-demo="5" type="button">연속 5건</button>
-          <button class="demo-b" data-demo="15" type="button">러시 15건</button>
-        </div>
-        <div class="demo-row">
-          <button class="demo-b" data-demo="big" type="button">고액 1건</button>
-          <input id="demoAmt" type="number" min="0" step="1000" placeholder="금액 직접" />
-          <button class="demo-b" id="demoSend" type="button">보내기</button>
-        </div>
-        <p class="demo-note">닉네임 &middot; 메시지 &middot; 금액이 매번 다르게 만들어집니다. 실제 후원과 똑같이 처리됩니다.</p>
-      </div>
-    </div>
     <button class="icon-btn" id="soundBtn" type="button" title="소리 켜기/끄기" aria-label="소리 켜기/끄기">&#128266;</button>
-    <button class="icon-btn" id="resetBtn" type="button" title="처음부터 다시" aria-label="처음부터 다시">&#8634;</button>
+    <button class="txt-btn danger" id="resetBtn" type="button" title="모은 알과 기록을 모두 지우고 처음부터 다시 시작합니다">&#8634; 초기화</button>
   </div>
 </header>
 
@@ -240,9 +223,9 @@
 </div>
 
 <script src="vendor/socket.io-2.5.0.slim.js"></script>
-<script src="config.js?v=18"></script>
-<script src="eggs.js?v=18"></script>
-<script src="chzzk.js?v=18"></script>
-<script src="game.js?v=18"></script>
+<script src="config.js?v=20"></script>
+<script src="eggs.js?v=20"></script>
+<script src="chzzk.js?v=20"></script>
+<script src="game.js?v=20"></script>
 </body>
 </html>
