@@ -65,7 +65,12 @@ const el = {
   reveal: $('reveal'),
   revealCard: $('revealCard'),
 
-  soundBtn: $('soundBtn'),
+  sfxBtn: $('sfxBtn'),
+  bgmBtn: $('bgmBtn'),
+  devPanel: $('devPanel'),
+  devNick: $('devNick'),
+  devAmt: $('devAmt'),
+  devSend: $('devSend'),
   resetBtn: $('resetBtn'),
   saveHint: $('saveHint'),
   chzLogin: $('chzLoginBtn'),
@@ -84,7 +89,8 @@ function freshState() {
     progress: 0, // 다음 알까지 누적된 ms
     lastSeen: now,
     startedAt: now,
-    sound: true,
+    sound: true, // 효과음
+    bgm: true,   // 배경음
     // sum / clicks 는 내부 기록용. 화면에는 띄우지 않는다.
     don: { count: 0, sum: 0, clicks: 0, feed: [], seen: [] },
   };
@@ -180,8 +186,9 @@ function rollEgg() {
 
 /* ---------------- 사운드 ---------------- */
 let actx = null;
-function audio() {
-  if (!state.sound) return null;
+
+/** 오디오 컨텍스트만 보장한다. 효과음/배경음 on-off 는 각자 판단한다. */
+function audioCtx() {
   if (!actx) {
     const AC = window.AudioContext || window.webkitAudioContext;
     if (!AC) return null;
@@ -192,7 +199,8 @@ function audio() {
 }
 
 function tone(freq, start, dur, type, vol) {
-  const ac = audio();
+  if (!state.sound) return;
+  const ac = audioCtx();
   if (!ac) return;
   const t0 = ac.currentTime + start;
   const o = ac.createOscillator();
@@ -223,6 +231,149 @@ function sfxDrop(tierKey) {
 
 function sfxDonation() {
   [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => tone(f, i * 0.07, 0.3, 'square', 0.09));
+}
+
+/* ---------------- 배경음 ----------------
+ * 음원 파일을 쓰지 않고 WebAudio 로 직접 합성한다 — 저작권 문제가 원천적으로 없고,
+ * 파일도 받지 않으니 저장소가 가벼우며 오프라인에서도 그대로 돈다.
+ * 78 BPM, G장조 G–D–Em–C 진행을 통기타 핑거피킹처럼 뜯는다. 농가 아침 느낌. */
+const BGM_BPM = 78;
+const BGM_VOL = 0.075;
+const BGM_BEAT = 60 / BGM_BPM;
+const BGM_BAR = BGM_BEAT * 4;
+const BGM_PROG = [
+  { bass: 'G2', notes: ['G3', 'B3', 'D4', 'G4'] },
+  { bass: 'D2', notes: ['A3', 'D4', 'F#4', 'A4'] },
+  { bass: 'E2', notes: ['E3', 'G3', 'B3', 'E4'] },
+  { bass: 'C3', notes: ['C3', 'E3', 'G3', 'C4'] },
+];
+// 8분음표 8개. -1 은 베이스 줄
+const BGM_PATTERN = [-1, 2, 1, 3, 0, 2, 3, 1];
+const SEMI = { C: 0, 'C#': 1, D: 2, 'D#': 3, E: 4, F: 5, 'F#': 6, G: 7, 'G#': 8, A: 9, 'A#': 10, B: 11 };
+
+function noteHz(n) {
+  const m = /^([A-G]#?)(-?\d)$/.exec(n);
+  const semis = SEMI[m[1]] - 9 + (parseInt(m[2], 10) - 4) * 12;
+  return 440 * Math.pow(2, semis / 12);
+}
+
+let bgmGain = null;
+let bgmTimer = null;
+let bgmNext = 0;
+let bgmBar = 0;
+
+function bgmBus() {
+  const ac = audioCtx();
+  if (!ac) return null;
+  if (!bgmGain) {
+    bgmGain = ac.createGain();
+    bgmGain.gain.value = 0;
+    bgmGain.connect(ac.destination);
+  }
+  return bgmGain;
+}
+
+/** 통기타 한 음 */
+function bgmPluck(f, t, dur, vel) {
+  const ac = actx;
+  const out = ac.createGain();
+  const lp = ac.createBiquadFilter();
+  lp.type = 'lowpass';
+  lp.frequency.setValueAtTime(3200, t);
+  lp.frequency.exponentialRampToValueAtTime(800, t + dur * 0.85);
+
+  const o1 = ac.createOscillator();
+  o1.type = 'triangle';
+  o1.frequency.value = f;
+  const o2 = ac.createOscillator();
+  o2.type = 'sine';
+  o2.frequency.value = f * 2;
+  const h = ac.createGain();
+  h.gain.value = 0.3;
+
+  out.gain.setValueAtTime(0, t);
+  out.gain.linearRampToValueAtTime(vel, t + 0.008);
+  out.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+
+  o1.connect(out);
+  o2.connect(h);
+  h.connect(out);
+  out.connect(lp);
+  lp.connect(bgmGain);
+  o1.start(t);
+  o2.start(t);
+  o1.stop(t + dur + 0.05);
+  o2.stop(t + dur + 0.05);
+}
+
+/** 뒤에 얇게 깔리는 패드 */
+function bgmPad(f, t, dur) {
+  const ac = actx;
+  const o = ac.createOscillator();
+  o.type = 'sine';
+  o.frequency.value = f;
+  const g = ac.createGain();
+  g.gain.setValueAtTime(0, t);
+  g.gain.linearRampToValueAtTime(0.14, t + 0.7);
+  g.gain.setValueAtTime(0.14, t + dur - 0.7);
+  g.gain.linearRampToValueAtTime(0.0001, t + dur);
+  o.connect(g);
+  g.connect(bgmGain);
+  o.start(t);
+  o.stop(t + dur + 0.05);
+}
+
+function bgmScheduleBar(t, bar) {
+  const ch = BGM_PROG[bar % BGM_PROG.length];
+  bgmPad(noteHz(ch.bass) * 2, t, BGM_BAR);
+  for (let i = 0; i < 8; i++) {
+    const at = t + i * (BGM_BEAT / 2);
+    const idx = BGM_PATTERN[i];
+    const isBass = idx < 0;
+    const f = isBass ? noteHz(ch.bass) : noteHz(ch.notes[idx]);
+    const accent = i === 0 ? 1 : i === 4 ? 0.85 : 0.66;
+    const vel = (isBass ? 0.5 : 0.36) * accent * (0.88 + Math.random() * 0.24);
+    bgmPluck(f, at, isBass ? 1.5 : 1.1, vel);
+  }
+}
+
+function bgmPump() {
+  const ac = audioCtx();
+  if (!ac || !bgmGain) return;
+  while (bgmNext < ac.currentTime + 1.0) {
+    bgmScheduleBar(bgmNext, bgmBar++);
+    bgmNext += BGM_BAR;
+  }
+}
+
+function startBgm() {
+  const bus = bgmBus();
+  if (!bus || bgmTimer) return;
+  const ac = actx;
+  if (ac.state === 'suspended') return; // 아직 사용자 조작 전 — 첫 조작 때 다시 부른다
+  bus.gain.cancelScheduledValues(ac.currentTime);
+  bus.gain.setTargetAtTime(BGM_VOL, ac.currentTime, 0.4);
+  bgmNext = ac.currentTime + 0.12;
+  bgmPump();
+  bgmTimer = setInterval(bgmPump, 250);
+}
+
+function stopBgm() {
+  if (bgmTimer) {
+    clearInterval(bgmTimer);
+    bgmTimer = null;
+  }
+  if (bgmGain && actx) {
+    bgmGain.gain.cancelScheduledValues(actx.currentTime);
+    bgmGain.gain.setTargetAtTime(0, actx.currentTime, 0.25);
+  }
+}
+
+function syncAudioButtons() {
+  el.sfxBtn.classList.toggle('is-off', !state.sound);
+  el.sfxBtn.innerHTML = (state.sound ? '&#128266;' : '&#128263;') + ' 효과음';
+  el.bgmBtn.classList.toggle('is-off', !state.bgm);
+  el.bgmBtn.innerHTML = (state.bgm ? '&#127925;' : '&#128263;') + ' 배경음';
 }
 
 /* ---------------- 획득 ---------------- */
@@ -543,6 +694,50 @@ function renderNow() {
   if (donQueue.length) el.donWaitN.textContent = nf(donQueue.length);
 }
 
+/* ---------------- 후원 테스트 (개발/운영용) ----------------
+ * Ctrl + Shift + D 로만 열린다. 평소에는 화면에 흔적이 없어 시청자가 알아챌 수 없다. */
+const TEST_NICKS = ['구르미', '거위대장', '노른자', '알사랑', '흰둥이', '금손', '후원요정',
+  '팬1호', '거위밥', '황금손', '알까기장인', '24K충성', '치킨은사랑', '월급날', '꽥꽥'];
+const TEST_MSGS = ['거위야 힘내라', '24K 나와라', '신화 뜰 때까지', '오늘도 쓰담쓰담',
+  '손목 조심하세요', '골드바 가자', '도감 다 채우자', '전설 좀 주세요', '', ''];
+const TEST_AMOUNTS = [1000, 1000, 1000, 2000, 2000, 3000, 3000, 5000, 5000, 10000, 20000, 50000];
+const pick = (a) => a[Math.floor(Math.random() * a.length)];
+let testSeq = 0;
+
+function testDonate(amount, nick) {
+  testSeq += 1;
+  handleDonation({
+    id: 'test|' + Date.now() + '|' + testSeq + '|' + Math.random().toString(36).slice(2),
+    nick: nick || pick(TEST_NICKS),
+    amount: amount != null ? amount : pick(TEST_AMOUNTS),
+    message: pick(TEST_MSGS),
+    isVideo: false,
+  });
+}
+
+function testBurst(n) {
+  let delay = 0;
+  for (let i = 0; i < n; i++) {
+    setTimeout(() => testDonate(), delay);
+    delay += 260 + Math.random() * 900;
+  }
+}
+
+function initDevPanel() {
+  el.devPanel.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-dev]');
+    if (b) testBurst(Number(b.dataset.dev));
+  });
+  el.devSend.addEventListener('click', () => {
+    const v = Math.floor(Number(el.devAmt.value));
+    testDonate(isFinite(v) && v >= 0 && el.devAmt.value !== '' ? v : null, el.devNick.value.trim() || null);
+    el.devAmt.value = '';
+  });
+  el.devAmt.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') el.devSend.click();
+  });
+}
+
 /* ---------------- 알 상세 (사용자가 직접 눌렀을 때만) ---------------- */
 function showEggDetail(egg) {
   const rec = state.owned[egg.id];
@@ -812,7 +1007,7 @@ function init() {
     offline++;
   }
 
-  el.soundBtn.classList.toggle('is-off', !state.sound);
+  syncAudioButtons();
   renderAll();
   renderRates();
 
@@ -839,15 +1034,44 @@ function init() {
     if (e.target.classList.contains('reveal-btn') || e.target.classList.contains('reveal-bg')) closeReveal();
   });
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') closeReveal();
+    if (e.key === 'Escape') {
+      closeReveal();
+      el.devPanel.hidden = true;
+    }
+    // 숨겨진 후원 테스트 패널
+    if (e.ctrlKey && e.shiftKey && (e.key === 'D' || e.key === 'd')) {
+      e.preventDefault();
+      el.devPanel.hidden = !el.devPanel.hidden;
+    }
   });
 
-  el.soundBtn.addEventListener('click', () => {
+  el.sfxBtn.addEventListener('click', () => {
     state.sound = !state.sound;
-    el.soundBtn.classList.toggle('is-off', !state.sound);
+    syncAudioButtons();
     if (state.sound) sfxClick();
     save(true);
   });
+  el.bgmBtn.addEventListener('click', () => {
+    state.bgm = !state.bgm;
+    syncAudioButtons();
+    if (state.bgm) startBgm();
+    else stopBgm();
+    save(true);
+  });
+
+  // 브라우저는 사용자가 한 번 조작하기 전에는 소리를 못 내게 막는다 → 첫 조작 때 배경음을 켠다
+  const kick = () => {
+    audioCtx();
+    if (state.bgm) startBgm();
+    if (actx && actx.state === 'running') {
+      document.removeEventListener('pointerdown', kick, true);
+      document.removeEventListener('keydown', kick, true);
+    }
+  };
+  document.addEventListener('pointerdown', kick, true);
+  document.addEventListener('keydown', kick, true);
+
+  initDevPanel();
   el.resetBtn.addEventListener('click', () => {
     if (!confirm('모은 알과 기록이 모두 사라집니다. 정말 처음부터 다시 시작할까요?')) return;
     localStorage.removeItem(SAVE_KEY);
@@ -886,6 +1110,7 @@ document.addEventListener('DOMContentLoaded', init);
 window.__gg = {
   state: () => state,
   lay: (n) => layEggs(n || 1, 'timer', CREDIT_GOOSE),
+  test: (n) => testBurst(n || 1),
   donate: (won, nick, msg) =>
     handleDonation({
       id: 'dbg|' + Date.now() + '|' + Math.random(),

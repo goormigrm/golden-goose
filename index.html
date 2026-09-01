@@ -7,7 +7,7 @@
 <meta name="description" content="순금 24K 황금알을 낳는 거위. 쓰다듬고, 기다리고, 도감을 채우는 수집형 클리커." />
 <meta name="theme-color" content="#12100c" />
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 114'%3E%3Cpath d='M50 6C74 6 93 40 93 66 93 92 74 108 50 108 26 108 7 92 7 66 7 40 26 6 50 6Z' fill='%23ffd84d'/%3E%3C/svg%3E" />
-<link rel="stylesheet" href="styles.css?v=24" />
+<link rel="stylesheet" href="styles.css?v=30" />
 </head>
 <body>
 
@@ -21,11 +21,17 @@
       <p>순금 <b>24K</b> 황금알을 낳는 거위</p>
     </div>
   </div>
+  <div class="bgm-note" title="음원 파일이나 샘플을 하나도 쓰지 않습니다. 브라우저가 코드로 소리를 직접 만들어 내며, 기존 곡을 옮기거나 인용한 부분이 없습니다. 방송에 그대로 써도 됩니다.">
+    <span class="bgm-note-i" aria-hidden="true">&#9834;</span>
+    배경음은 이 페이지가 <b>직접 만든 소리</b> &middot; 외부 음원 <b>0개</b> &middot; <b>저작권 문제 없음</b>
+  </div>
+
   <div class="topbar-actions">
     <span class="chz-status" id="chzStatus" data-s="off">연동 꺼짐</span>
     <button class="chz-btn" id="chzLoginBtn" type="button">치지직 로그인</button>
     <button class="chz-btn ghost" id="chzLogoutBtn" type="button" hidden>로그아웃</button>
-    <button class="icon-btn" id="soundBtn" type="button" title="소리 켜기/끄기" aria-label="소리 켜기/끄기">&#128266;</button>
+    <button class="txt-btn" id="sfxBtn" type="button" title="효과음 켜기/끄기">&#128266; 효과음</button>
+    <button class="txt-btn" id="bgmBtn" type="button" title="배경음 켜기/끄기">&#127925; 배경음</button>
     <button class="txt-btn danger" id="resetBtn" type="button" title="모은 알과 기록을 모두 지우고 처음부터 다시 시작합니다">&#8634; 초기화</button>
   </div>
 </header>
@@ -210,6 +216,21 @@
   <span class="save-hint" id="saveHint">저장됨</span>
 </footer>
 
+<!-- 후원 테스트 (개발/운영용) : Ctrl + Shift + D 로만 열린다. 평소엔 화면에 없다 -->
+<div class="devpanel" id="devPanel" hidden>
+  <div class="dev-h">후원 테스트<span>Ctrl + Shift + D</span></div>
+  <div class="dev-row">
+    <button class="dev-b" data-dev="1" type="button">랜덤 1건</button>
+    <button class="dev-b" data-dev="5" type="button">5건</button>
+    <button class="dev-b" data-dev="15" type="button">15건</button>
+  </div>
+  <div class="dev-row">
+    <input id="devNick" type="text" placeholder="닉네임" />
+    <input id="devAmt" type="number" min="0" step="1000" placeholder="금액" />
+    <button class="dev-b" id="devSend" type="button">보내기</button>
+  </div>
+</div>
+
 <!-- 알 획득 알림 : 클릭을 절대 막지 않는다 -->
 <div class="drop-stack" id="dropStack" aria-live="polite"></div>
 <div class="tier-flash" id="tierFlash" aria-hidden="true"></div>
@@ -221,9 +242,9 @@
 </div>
 
 <script src="vendor/socket.io-2.5.0.slim.js"></script>
-<script src="config.js?v=24"></script>
-<script src="eggs.js?v=24"></script>
-<script src="chzzk.js?v=24"></script>
-<script src="game.js?v=24"></script>
+<script src="config.js?v=30"></script>
+<script src="eggs.js?v=30"></script>
+<script src="chzzk.js?v=30"></script>
+<script src="game.js?v=30"></script>
 </body>
 </html>
