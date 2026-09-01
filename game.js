@@ -254,6 +254,13 @@ function layEggs(n, source) {
   el.goose.classList.add('is-lay');
   setTimeout(() => el.goose.classList.remove('is-lay'), 720);
 
+  // 가장 높은 등급을 맨 앞에 두고 그려서, 많이 낳아도 좋은 알은 반드시 보이게 한다
+  got
+    .slice()
+    .sort((a, b) => tierIdx(b.egg.tier) - tierIdx(a.egg.tier))
+    .slice(0, EGG_FX_MAX)
+    .forEach((x, i) => eggBurst(x.egg, i));
+
   notifyDrop(got, source, best);
 }
 
@@ -373,6 +380,31 @@ function popText(text, x, y) {
   d.style.top = y + 'px';
   el.fx.appendChild(d);
   setTimeout(() => d.remove(), 950);
+}
+
+/** 거위 꽁무니에서 알이 실제로 튀어나오는 연출.
+ *  여러 개를 한꺼번에 낳을 때는 화면이 알로 뒤덮이지 않게 앞쪽 몇 개만 그린다. */
+const EGG_FX_MAX = 8;
+
+function eggBurst(egg, i) {
+  const g = el.goose.getBoundingClientRect();
+  const f = el.fx.getBoundingClientRect();
+  if (!g.width || !f.width) return;
+
+  const size = Math.max(26, g.width * 0.135);
+  const d = document.createElement('div');
+  d.className = 'fx-egg';
+  if (tierIdx(egg.tier) >= 3) d.classList.add('hi');
+  d.style.setProperty('--tc', tierOf(egg).color);
+  d.style.setProperty('--dx1', (Math.random() * 26 - 13).toFixed(0) + 'px');
+  d.style.setProperty('--dx2', (58 + Math.random() * 80).toFixed(0) + 'px');
+  d.style.width = size + 'px';
+  d.style.left = (g.left - f.left + g.width * 0.70 - size / 2) + 'px';
+  d.style.top = (g.top - f.top + g.height * 0.78) + 'px';
+  d.style.animationDelay = (150 + i * 120) + 'ms';
+  d.innerHTML = eggSvg(egg);
+  el.fx.appendChild(d);
+  setTimeout(() => d.remove(), 2000 + i * 120);
 }
 
 function feather(x, y) {
