@@ -4,13 +4,13 @@
  * ============================================================ */
 
 /** 치지직 개발자센터 Client ID (공개돼도 되는 값) */
-const PRESET_CLIENT_ID = '95337781-0490-4c9b-ac9a-9577a9ef4db0';
+const PRESET_CLIENT_ID = 'afd9f0b7-64f7-4cf9-baa0-ea25d0a3354b';
 
 /** CORS 프록시(Cloudflare Worker) 주소.
  *  openapi.chzzk.naver.com 은 브라우저에서 직접 호출이 막혀 있어 REST는 이걸 거친다.
  *  Client Secret 은 이 코드가 아니라 워커의 환경변수(CHZZK_CLIENT_SECRET)에만 존재한다.
- *  ※ 먹방룰렛과 같은 워커를 공유한다. 따로 쓰고 싶으면 워커를 새로 배포하고 주소만 바꾸면 된다. */
-const PRESET_PROXY_URL = 'https://mukbang-proxy.1117tkdrms.workers.dev';
+ *  소스: proxy/worker.js — `cd proxy && npx wrangler deploy` 로 재배포. */
+const PRESET_PROXY_URL = 'https://golden-goose-proxy.1117tkdrms.workers.dev';
 
 /* ---------------- 게임 규칙 ---------------- */
 

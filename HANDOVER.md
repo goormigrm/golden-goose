@@ -1,20 +1,20 @@
 # HANDOVER — GOLDEN GOOSE 24K
 
 > 다음 세션(사람/AI 누구든)이 이 문서만 읽고 이어서 작업할 수 있도록 남기는 인수인계 문서.
-> 마지막 업데이트: **2026-09-01** · 상태: **개발 완료, GitHub Pages 배포 완료, 치지직 실연동 확인 전**
+> 마지막 업데이트: **2026-09-01** · 상태: **개발·배포 완료, 전용 치지직 앱/프록시 구축 완료, 실도네 확인 전**
 
 ## 1. 한눈에 보기
 
 | 항목 | 값 |
 |---|---|
 | 무엇 | 순금 24K 황금알을 낳는 거위 — 클릭 카운터 + 랜덤 등급 드롭 + 도감 수집형 클리커 |
-| 원안 | Steam [Banana](https://store.steampowered.com/app/2923300/Banana/) — 클릭 카운터 / 시간마다 등급 드롭 / 인벤토리 수집 구조를 그대로 차용 |
 | 라이브 | https://goormigrm.github.io/golden-goose/ |
 | 저장소 | https://github.com/goormigrm/golden-goose (main push → Pages 자동 반영, 빌드 없음) |
 | 스택 | **빌드 없음.** 정적 HTML/CSS/바닐라 JS + socket.io-client **2.5.0 고정**(vendor 폴더) |
-| 치지직 앱 | 먹방룰렛과 **같은 앱·같은 프록시 공유** · Client ID `95337781-0490-4c9b-ac9a-9577a9ef4db0` |
-| 프록시 | https://mukbang-proxy.1117tkdrms.workers.dev (Cloudflare, 계정 1117tkdrms) |
-| 관련 저장소 | [mukbang-roulette](https://github.com/goormigrm/mukbang-roulette) — 치지직 연동 원본, `proxy/worker.js` 정본 |
+| 치지직 앱 | **이 게임 전용 앱** · Client ID `afd9f0b7-64f7-4cf9-baa0-ea25d0a3354b` |
+| 프록시 | https://golden-goose-proxy.1117tkdrms.workers.dev (Cloudflare, 계정 1117tkdrms) · 소스 `proxy/worker.js` |
+| 관련 저장소 | [mukbang-roulette](https://github.com/goormigrm/mukbang-roulette) — 치지직 연동 코드의 출처 (앱·워커는 서로 완전히 별개) |
+| 저작권 | © 2026 goormigrm |
 
 **검증 상태**: 로컬 서버에서 클릭·정기 산란·즉석 산란·도감·후원 환산(테스트 후원)·저장/복원 전부 동작 확인.
 **배포 검증(2026-09-01)**: 정적 파일 7개 전부 200, 콘솔 에러 없음, `io`/`Chzzk`/`__gg` 로드 확인,
@@ -58,6 +58,7 @@
 | `chzzk.js` | OAuth → 세션 → 후원 구독 + 지수 백오프 재연결 (`rr/src/chzzk.ts`의 바닐라 포팅) |
 | `game.js` | 상태/저장, 클릭, 산란, 후원 환산 큐, 렌더, 연출 |
 | `vendor/` | socket.io-client 2.5.0 slim (mukbang-roulette의 node_modules에서 복사) |
+| `proxy/` | 전용 Cloudflare Worker (`golden-goose-proxy`) + wrangler 설정 |
 
 ## 4. 체인지로그
 
@@ -65,25 +66,37 @@
 2. **24K 순금 강조**(사용자 요청) — 헤더 24K 칩, 회전하는 순금 인증 각인(999.9), 24K 스트립(보유 순금 실시간), 알마다 재질 표기, 순금 6종에 함유량 부여 + 확률 탭에 24K 목록, 알 카드 24K 태그
 3. **치지직 후원 연동**(사용자 요청) — 1,000원 = 쓰다듬기 10회. `chzzk.js` 포팅, 후원 탭(내역/합계/테스트 후원/리디렉션 URI 안내), 후원 배너 연출, 자동 쓰다듬기 큐(6초 소진), 초당 쓰다듬기(cps)에 자동분 반영
 4. 문서 — README / `docs/공지글-모음.md` / 이 문서
+5. **GitHub Pages 배포**(저장소 `golden-goose`) — 파일 7개 200, 콘솔 에러 없음 확인
+6. **전용 치지직 앱·프록시로 분리**(사용자 요청) — 새 Client ID 발급, `proxy/`에 전용 워커
+   `golden-goose-proxy` 배포 + Secret 등록, `config.js` 교체. 룰렛과 완전히 독립
+7. **카피라이트 정리**(사용자 요청) — 푸터를 `© 2026 goormigrm · GOLDEN GOOSE 24K`로 교체,
+   외부 게임 언급 제거, README에 저작권 절 추가
 
 ## 5. 다음 할 일 (우선순위순)
 
 1. ~~GitHub 저장소 생성 + Pages 배포~~ **완료** (2026-09-01, 저장소명 `golden-goose`)
-2. **개발자센터에 리디렉션 URI 추가** — `https://goormigrm.github.io/golden-goose/`
-   먹방룰렛 앱에 URI를 하나 더 등록하는 방식(권장). 앱을 나누고 싶으면 새 앱 등록 후 `config.js`의 `PRESET_CLIENT_ID` 교체.
-   등록 후 사이트에서 [치지직 로그인] → 동의 → 배지가 🟢 후원 수신 중이 되는지 확인.
-3. **실도네 E2E** — 방송 켜고 소액 후원 → 배너/카운터/후원 탭 반영 확인
-4. (선택) 워커 `ALLOWED_ORIGINS`를 쓰기로 했다면 이 사이트 오리진도 추가해야 함 (현재는 빈 배열 = 전체 허용)
-5. (아이디어, 미구현) 알 판매·업그레이드·부화, 도감 완성 보상, 후원자별 기여 순위, OBS용 컴팩트 모드
+2. ~~전용 앱·프록시 구축~~ **완료** — 워커 `golden-goose-proxy` 배포, `CHZZK_CLIENT_ID`/`CHZZK_CLIENT_SECRET` 등록됨
+3. **치지직 로그인 확인** — 개발자센터의 이 앱에 리디렉션 URI `https://goormigrm.github.io/golden-goose/`가
+   등록돼 있어야 한다. 사이트에서 [치지직 로그인] → 동의 → 배지가 🟢 후원 수신 중이 되는지 확인.
+4. **실도네 E2E** — 방송 켜고 소액 후원 → 배너/카운터/후원 탭 반영 확인
+5. ⚠ **Client Secret 재발급 권장** — 초기 설정 때 Secret이 대화에 노출됐다.
+   개발자센터에서 재발급 후 `cd proxy && printf '%s' '<새Secret>' | npx wrangler secret put CHZZK_CLIENT_SECRET`
+   (개행이 붙으면 `INVALID_CLIENT`가 난다 — `printf '%s'` 필수)
+6. (선택) 워커 `ALLOWED_ORIGINS`에 `https://goormigrm.github.io`를 넣어 프록시 잠그기 → `npx wrangler deploy`
+7. (아이디어, 미구현) 알 판매·업그레이드·부화, 도감 완성 보상, 후원자별 기여 순위, OBS용 컴팩트 모드
 
-## 6. 저장소 이름 후보
+## 6. 룰렛과의 관계
 
-| 이름 | 이유 |
-|---|---|
-| **`golden-goose`** (1순위) | 게임 타이틀 그대로. 짧고 검색·기억이 쉽고 URL이 `goormigrm.github.io/golden-goose/`로 깔끔. 지금 문서들이 이 이름 기준으로 쓰여 있음 |
-| `golden-goose-24k` | 24K를 이름에서부터 못 박고 싶을 때. URL이 조금 길어짐 |
-| `honk24` | 거위 울음(honk) + 24K. 짧고 밈스러움. 다만 뭘 하는 저장소인지 이름만으론 모름 |
-| `egggg` | Banana가 그냥 "Banana"였던 것처럼 극단적 미니멀. 재미는 있지만 검색성 최악 |
+코드 출처만 같고 **운영은 완전히 분리**돼 있다. 한쪽을 건드려도 다른 쪽은 안 깨진다.
+
+| | 먹방 룰렛 | GOLDEN GOOSE 24K |
+|---|---|---|
+| 치지직 앱 | `95337781-…` | `afd9f0b7-…` |
+| 프록시 워커 | `mukbang-proxy` | `golden-goose-proxy` |
+| 저장소 | mukbang-roulette | golden-goose |
+
+`chzzk.js`는 룰렛 `src/chzzk.ts`의 바닐라 포팅이고, `proxy/worker.js`는 룰렛 워커에서 복사해 왔다.
+**룰렛 쪽 연동 로직에 버그를 고치면 이쪽에도 같은 수정을 반영해야 한다**(자동 동기화 없음).
 
 ## 7. 개발 환경 메모 (이 PC 기준)
 

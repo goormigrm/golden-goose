@@ -1,13 +1,13 @@
 # GOLDEN GOOSE 24K 🥚
 
-**순금 24K 황금알을 낳는 거위** — 클릭하고, 기다리고, 도감을 채우는 수집형 클리커.
-Steam [**Banana**](https://store.steampowered.com/app/2923300/Banana/)의 구조(클릭 카운터 + 시간마다 랜덤 등급 드롭 + 인벤토리 수집)를 그대로 가져와,
-거위와 **순도 999.9의 24K 순금알**로 다시 만들었다.
+**순금 24K 황금알을 낳는 거위** — 쓰다듬고, 기다리고, 도감을 채우는 수집형 클리커.
+클릭 카운터 하나와 **순도 999.9의 24K 순금알** 34종, 그리고 그걸 다 모으고 싶어지는 마음이 전부다.
 
 치지직 후원과 연동되어 **1,000원당 거위를 10번 쓰다듬어** 준다.
 
+*by [goormigrm](https://github.com/goormigrm)*
+
 **접속**: https://goormigrm.github.io/golden-goose/
-*(저장소 이름을 다르게 만들었다면 이 주소와 아래 리디렉션 URI를 그 이름으로 바꿔야 한다)*
 
 ---
 
@@ -56,14 +56,26 @@ Steam [**Banana**](https://store.steampowered.com/app/2923300/Banana/)의 구조
 
 ### 개발자가 할 일 (최초 1회)
 
-1. **리디렉션 URI 등록** — [치지직 개발자센터](https://developers.chzzk.naver.com)의 애플리케이션 설정에
-   `https://goormigrm.github.io/golden-goose/` 를 로그인 리디렉션 URI로 **추가**한다.
-   먹방룰렛과 같은 앱을 쓰면 Client ID·프록시를 그대로 재사용할 수 있다.
-   (별도 앱으로 가고 싶으면 새로 등록한 뒤 `config.js`의 `PRESET_CLIENT_ID`를 바꾼다)
-2. **프록시** — 이미 배포된 워커(`https://mukbang-proxy.1117tkdrms.workers.dev`)를 공유한다.
-   따로 쓰려면 먹방룰렛 저장소의 `proxy/worker.js`를 새 워커로 배포하고
-   `config.js`의 `PRESET_PROXY_URL`만 바꾸면 된다.
-   Client Secret은 **워커의 환경변수에만** 있고 이 저장소에는 없다.
+이 게임은 **전용 치지직 앱과 전용 프록시 워커**를 쓴다. (아래는 이미 완료된 상태)
+
+1. **앱 등록** — [치지직 개발자센터](https://developers.chzzk.naver.com)에서 애플리케이션 등록,
+   로그인 리디렉션 URI = `https://goormigrm.github.io/golden-goose/`, 후원 조회 권한 포함
+2. **프록시 배포** — `proxy/` 폴더에서
+
+   ```bash
+   npx wrangler deploy
+   ```
+
+   배포 후 Client ID/Secret을 워커 Secret으로 등록한다. **개행이 붙으면 `INVALID_CLIENT`가 나므로 `printf '%s'`를 쓴다.**
+
+   ```bash
+   printf '%s' '<Client Secret>' | npx wrangler secret put CHZZK_CLIENT_SECRET
+   ```
+
+3. **주소 심기** — `config.js`의 `PRESET_CLIENT_ID`, `PRESET_PROXY_URL`을 채우고 push
+   → 현재 값: 앱 `afd9f0b7-…`, 워커 `https://golden-goose-proxy.1117tkdrms.workers.dev`
+
+Client Secret은 **워커의 환경변수에만** 있고 이 저장소 어디에도 없다.
 
 ### 스트리머가 할 일 (클릭 2번)
 
@@ -95,6 +107,7 @@ npx serve .
 
 ```
 index.html                    화면 구조 + 거위/24K 각인 SVG
+proxy/worker.js               치지직 CORS 프록시 (Cloudflare Worker)
 styles.css                    전체 스타일 (다크 + 금색)
 config.js                     Client ID / 프록시 주소 / 게임 상수 ← 규칙 조정은 여기
 eggs.js                       알 34종 데이터 + 등급표 + 알 SVG 렌더러
@@ -127,3 +140,10 @@ __gg.donate(10000) // 10,000원 후원 시뮬레이션
 ```
 
 [후원] 탭의 **[테스트 후원]** 버튼으로도 같은 걸 할 수 있다.
+
+---
+
+## 저작권
+
+© 2026 **goormigrm**. GOLDEN GOOSE 24K.
+거위 그림, 알 34종 디자인, 게임 규칙, 코드 전부 직접 만든 것이다.
