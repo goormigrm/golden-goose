@@ -713,16 +713,21 @@ function renderStats() {
     .map((c) => '<div class="stat' + (c.gold ? ' gold' : '') + '"><div class="k">' + c.k + '</div><div class="v">' + c.v + '</div></div>')
     .join('');
 
-  const total = totalEggs() || 1;
+  // 막대는 "그 등급을 몇 종 모았는가"로 채운다. 보유 개수 비율로 그리면
+  // 일반이 대부분을 차지해 높은 등급 막대가 사실상 움직이지 않는다.
   el.tierStats.innerHTML = TIERS.slice()
     .reverse()
     .map((t) => {
-      const n = EGGS_BY_TIER[t.key].reduce((s, e) => s + (state.owned[e.id] ? state.owned[e.id].c : 0), 0);
+      const pool = EGGS_BY_TIER[t.key];
+      const have = pool.filter((e) => state.owned[e.id]).length;
+      const cnt = pool.reduce((s, e) => s + (state.owned[e.id] ? state.owned[e.id].c : 0), 0);
+      const pct = (have / pool.length) * 100;
       return (
-        '<div class="tier-row" style="--tc:' + t.color + '">' +
+        '<div class="tier-row' + (have === pool.length ? ' done' : '') + '" style="--tc:' + t.color + '"' +
+        ' title="' + t.name + ' &middot; ' + have + ' / ' + pool.length + '종 &middot; 보유 ' + nf(cnt) + '개">' +
         '<span class="dot"></span><span class="nm" style="color:' + t.color + '">' + t.name + '</span>' +
-        '<span class="track"><span class="fill" style="width:' + (n / total) * 100 + '%"></span></span>' +
-        '<span class="num">' + nf(n) + '개</span></div>'
+        '<span class="track"><span class="fill" style="width:' + pct + '%"></span></span>' +
+        '<span class="num"><b>' + have + '</b> / ' + pool.length + '</span></div>'
       );
     })
     .join('');
