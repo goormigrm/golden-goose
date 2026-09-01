@@ -4,10 +4,10 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>GOLDEN GOOSE 24K · 황금알을 낳는 거위</title>
-<meta name="description" content="순금 24K 황금알을 낳는 거위. 쓰다듬고, 기다리고, 도감을 채우는 수집형 클리커. 치지직 후원 1,000원 = 쓰다듬기 10회." />
+<meta name="description" content="순금 24K 황금알을 낳는 거위. 쓰다듬고, 기다리고, 도감을 채우는 수집형 클리커." />
 <meta name="theme-color" content="#12100c" />
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 114'%3E%3Cpath d='M50 6C74 6 93 40 93 66 93 92 74 108 50 108 26 108 7 92 7 66 7 40 26 6 50 6Z' fill='%23ffd84d'/%3E%3C/svg%3E" />
-<link rel="stylesheet" href="styles.css?v=2" />
+<link rel="stylesheet" href="styles.css?v=3" />
 </head>
 <body>
 
@@ -30,168 +30,164 @@
   </div>
 </header>
 
-<main class="layout">
+<!-- ══════════ 후원 밴드 — 항상 맨 위에 크게 ══════════ -->
+<section class="donband" aria-label="치지직 후원">
+  <div class="donband-rule">
+    <span class="chz-dot" aria-hidden="true"></span>
+    <span class="dr-text">치지직 후원 <b>1,000원</b><i>=</i>거위 쓰다듬기 <b>10회</b></span>
+  </div>
 
-  <!-- ===== 왼쪽: 거위 무대 ===== -->
-  <section class="stage">
-    <div class="count-box">
-      <div class="count" id="clickCount">0</div>
-      <div class="count-label">쓰다듬기 &middot; <span id="cps">0.0</span>/초</div>
+  <div class="donband-feed" id="donFeed"></div>
+  <p class="donband-empty" id="donEmpty">첫 후원을 기다리는 중입니다. 후원하면 거위가 그만큼 시달립니다.</p>
+
+  <div class="donband-count">누적 <b id="donCount">0</b>건</div>
+</section>
+
+<main class="deck">
+
+  <!-- ══════════ 왼쪽 : 기록 · 확률 ══════════ -->
+  <section class="col col-left">
+    <div class="block">
+      <h2 class="block-h">기록</h2>
+      <div class="stat-grid" id="statGrid"></div>
     </div>
 
-    <div class="goose-stage">
-      <!-- 순금 24K 인증 각인 -->
-      <div class="k24-seal" aria-label="순금 24K 999.9 인증">
-        <svg viewBox="0 0 120 120" aria-hidden="true">
-          <defs>
-            <path id="sealArc" d="M60 60 m-43 0 a43 43 0 1 1 86 0 a43 43 0 1 1 -86 0" />
-          </defs>
-          <circle class="seal-ring" cx="60" cy="60" r="55" />
-          <circle class="seal-ring thin" cx="60" cy="60" r="47" />
-          <text class="seal-text"><textPath href="#sealArc" startOffset="0">CERTIFIED FINE GOLD &middot; 999.9 &middot; GOLDEN GOOSE &middot; </textPath></text>
-        </svg>
-        <span class="seal-core">24<small>K</small></span>
+    <div class="block">
+      <h2 class="block-h">등급별 수집</h2>
+      <div class="tier-stats" id="tierStats"></div>
+    </div>
+
+    <div class="block">
+      <h2 class="block-h">알 등급 확률</h2>
+      <table class="rates" id="ratesTable"></table>
+      <p class="note">등급이 먼저 정해지고, 같은 등급 안에서는 모든 알이 같은 확률로 나옵니다.</p>
+    </div>
+
+  </section>
+
+  <!-- ══════════ 가운데 : 거위 ══════════ -->
+  <section class="col col-mid">
+    <div class="mid-inner">
+      <div class="count-box">
+        <div class="count" id="clickCount">0</div>
+        <div class="count-label">쓰다듬기 &middot; <span id="cps">0.0</span>/초</div>
       </div>
 
-      <button class="goose-btn" id="gooseBtn" type="button" aria-label="거위 쓰다듬기">
-        <svg class="goose" viewBox="0 0 320 340" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-          <defs>
-            <linearGradient id="gBody" x1="0" y1="0" x2="0.2" y2="1">
-              <stop offset="0%" stop-color="#ffffff"/>
-              <stop offset="55%" stop-color="#f5f1e5"/>
-              <stop offset="100%" stop-color="#dcd3bd"/>
-            </linearGradient>
-            <linearGradient id="gWing" x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0%" stop-color="#fffdf6"/>
-              <stop offset="100%" stop-color="#cec4a9"/>
-            </linearGradient>
-            <linearGradient id="gBeak" x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0%" stop-color="#ffc84e"/>
-              <stop offset="100%" stop-color="#e2801f"/>
-            </linearGradient>
-            <radialGradient id="gHalo" cx="50%" cy="50%" r="50%">
-              <stop offset="0%" stop-color="rgba(255,201,77,.40)"/>
-              <stop offset="65%" stop-color="rgba(255,201,77,.07)"/>
-              <stop offset="100%" stop-color="rgba(255,201,77,0)"/>
-            </radialGradient>
-          </defs>
+      <div class="goose-stage">
+        <div class="k24-seal" aria-label="순금 24K 999.9 인증">
+          <svg viewBox="0 0 120 120" aria-hidden="true">
+            <defs>
+              <path id="sealArc" d="M60 60 m-43 0 a43 43 0 1 1 86 0 a43 43 0 1 1 -86 0" />
+            </defs>
+            <circle class="seal-ring" cx="60" cy="60" r="55" />
+            <circle class="seal-ring thin" cx="60" cy="60" r="47" />
+            <text class="seal-text"><textPath href="#sealArc" startOffset="0">CERTIFIED FINE GOLD &middot; 999.9 &middot; GOLDEN GOOSE &middot; </textPath></text>
+          </svg>
+          <span class="seal-core">24<small>K</small></span>
+        </div>
 
-          <ellipse class="halo" cx="160" cy="180" rx="158" ry="158" fill="url(#gHalo)"/>
-          <ellipse class="ground-shadow" cx="166" cy="314" rx="88" ry="13"/>
+        <button class="goose-btn" id="gooseBtn" type="button" aria-label="거위 쓰다듬기">
+          <svg class="goose" viewBox="0 0 320 340" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <defs>
+              <linearGradient id="gBody" x1="0" y1="0" x2="0.2" y2="1">
+                <stop offset="0%" stop-color="#ffffff"/>
+                <stop offset="55%" stop-color="#f5f1e5"/>
+                <stop offset="100%" stop-color="#dcd3bd"/>
+              </linearGradient>
+              <linearGradient id="gWing" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stop-color="#fffdf6"/>
+                <stop offset="100%" stop-color="#cec4a9"/>
+              </linearGradient>
+              <linearGradient id="gBeak" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stop-color="#ffc84e"/>
+                <stop offset="100%" stop-color="#e2801f"/>
+              </linearGradient>
+              <radialGradient id="gHalo" cx="50%" cy="50%" r="50%">
+                <stop offset="0%" stop-color="rgba(255,201,77,.40)"/>
+                <stop offset="65%" stop-color="rgba(255,201,77,.07)"/>
+                <stop offset="100%" stop-color="rgba(255,201,77,0)"/>
+              </radialGradient>
+            </defs>
 
-          <g class="goose-figure">
-            <g class="legs" stroke="url(#gBeak)" stroke-width="8" fill="none" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M142 266 L138 296 M138 296 L118 307 M138 296 L157 307"/>
-              <path d="M188 266 L194 296 M194 296 L175 307 M194 296 L214 307"/>
+            <ellipse class="halo" cx="160" cy="180" rx="158" ry="158" fill="url(#gHalo)"/>
+            <ellipse class="ground-shadow" cx="166" cy="314" rx="88" ry="13"/>
+
+            <g class="goose-figure">
+              <g class="legs" stroke="url(#gBeak)" stroke-width="8" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M142 266 L138 296 M138 296 L118 307 M138 296 L157 307"/>
+                <path d="M188 266 L194 296 M194 296 L175 307 M194 296 L214 307"/>
+              </g>
+
+              <path class="tail" d="M244 194 q44 -20 66 -8 q-18 28 -64 36 z" fill="url(#gWing)"/>
+              <ellipse class="belly" cx="162" cy="214" rx="92" ry="68" fill="url(#gBody)"/>
+              <path class="wing" d="M116 190 q60 -32 114 4 q-26 54 -88 46 q-32 -18 -26 -50 z" fill="url(#gWing)"/>
+              <path d="M148 232 q42 8 78 -16" fill="none" stroke="rgba(60,45,20,.12)" stroke-width="3" stroke-linecap="round"/>
+
+              <g class="neck-head">
+                <path class="neck" d="M128 178 C 98 140, 94 104, 104 80" fill="none" stroke="url(#gBody)" stroke-width="38" stroke-linecap="round"/>
+                <ellipse cx="104" cy="70" rx="31" ry="27" fill="url(#gBody)"/>
+                <path d="M78 63 L42 72 L78 85 Z" fill="url(#gBeak)"/>
+                <path d="M60 74 L78 78" stroke="rgba(110,60,10,.35)" stroke-width="2" stroke-linecap="round"/>
+                <ellipse class="eye" cx="94" cy="60" rx="4.6" ry="5.2" fill="#221f19"/>
+                <circle cx="95.6" cy="57.8" r="1.5" fill="#fff" opacity=".9"/>
+              </g>
             </g>
-
-            <path class="tail" d="M244 194 q44 -20 66 -8 q-18 28 -64 36 z" fill="url(#gWing)"/>
-            <ellipse class="belly" cx="162" cy="214" rx="92" ry="68" fill="url(#gBody)"/>
-            <path class="wing" d="M116 190 q60 -32 114 4 q-26 54 -88 46 q-32 -18 -26 -50 z" fill="url(#gWing)"/>
-            <path d="M148 232 q42 8 78 -16" fill="none" stroke="rgba(60,45,20,.12)" stroke-width="3" stroke-linecap="round"/>
-
-            <g class="neck-head">
-              <path class="neck" d="M128 178 C 98 140, 94 104, 104 80" fill="none" stroke="url(#gBody)" stroke-width="38" stroke-linecap="round"/>
-              <ellipse cx="104" cy="70" rx="31" ry="27" fill="url(#gBody)"/>
-              <path d="M78 63 L42 72 L78 85 Z" fill="url(#gBeak)"/>
-              <path d="M60 74 L78 78" stroke="rgba(110,60,10,.35)" stroke-width="2" stroke-linecap="round"/>
-              <ellipse class="eye" cx="94" cy="60" rx="4.6" ry="5.2" fill="#221f19"/>
-              <circle cx="95.6" cy="57.8" r="1.5" fill="#fff" opacity=".9"/>
-            </g>
-          </g>
-        </svg>
-      </button>
-      <div class="fx-layer" id="fxLayer" aria-hidden="true"></div>
-    </div>
-
-    <div class="k24-strip">
-      <span>순금 <b>24K</b></span><i></i>
-      <span>순도 <b>999.9</b></span><i></i>
-      <span>보유 순금 <b id="goldGram">0.00 g</b></span>
-    </div>
-
-    <div class="timer-box">
-      <div class="timer-head">
-        <span>다음 알까지</span>
-        <strong id="timerText">03:00</strong>
+          </svg>
+        </button>
+        <div class="fx-layer" id="fxLayer" aria-hidden="true"></div>
       </div>
-      <div class="timer-bar"><div class="timer-fill" id="timerFill"></div></div>
-      <p class="timer-hint">거위는 <b>3분마다</b> 알을 하나 낳습니다. 창을 닫아둔 동안에도 계속 낳아둡니다.</p>
+
+      <div class="k24-strip">
+        <span>순금 <b>24K</b></span><i></i>
+        <span>순도 <b>999.9</b></span><i></i>
+        <span>보유 순금 <b id="goldGram">0.00 g</b></span>
+      </div>
+
+      <div class="timer-box">
+        <div class="timer-head">
+          <span>다음 알까지</span>
+          <strong id="timerText">03:00</strong>
+        </div>
+        <div class="timer-bar"><div class="timer-fill" id="timerFill"></div></div>
+        <p class="timer-hint">거위는 <b>3분마다</b> 알을 하나 낳습니다. 쓰다듬다 보면 그 자리에서 낳기도 합니다.</p>
+      </div>
     </div>
   </section>
 
-  <!-- ===== 오른쪽: 패널 ===== -->
-  <aside class="panel">
-    <nav class="tabs" role="tablist">
-      <button class="tab is-on" data-tab="bag"   role="tab" type="button">둥지</button>
-      <button class="tab"        data-tab="dex"   role="tab" type="button">도감</button>
-      <button class="tab"        data-tab="don"   role="tab" type="button">후원</button>
-      <button class="tab"        data-tab="stats" role="tab" type="button">기록</button>
-      <button class="tab"        data-tab="rates" role="tab" type="button">확률</button>
-    </nav>
-
-    <div class="pane-wrap">
-      <!-- 둥지 -->
-      <section class="pane is-on" id="pane-bag" role="tabpanel">
-        <div class="pane-head">
-          <span>모은 알 <b id="bagTotal">0</b>개</span>
-          <select id="bagSort" aria-label="정렬">
-            <option value="tier">등급순</option>
-            <option value="recent">최근순</option>
-            <option value="count">개수순</option>
-          </select>
-        </div>
+  <!-- ══════════ 오른쪽 : 둥지 · 도감 ══════════ -->
+  <section class="col col-right">
+    <div class="block">
+      <h2 class="block-h">
+        둥지
+        <span class="h-sub">모은 알 <b id="bagTotal">0</b>개</span>
+        <select id="bagSort" aria-label="정렬">
+          <option value="tier">등급순</option>
+          <option value="recent">최근순</option>
+          <option value="count">개수순</option>
+        </select>
+      </h2>
+      <div class="scroll-y bag-scroll">
         <div class="egg-grid" id="bagGrid"></div>
         <p class="empty" id="bagEmpty">둥지가 비었습니다. 거위를 쓰다듬으며 기다려 보세요.</p>
-      </section>
-
-      <!-- 도감 -->
-      <section class="pane" id="pane-dex" role="tabpanel">
-        <div class="pane-head">
-          <span>도감 <b id="dexOwned">0</b> / <b id="dexTotal">0</b></span>
-          <span class="dex-pct" id="dexPct">0%</span>
-        </div>
-        <div class="dex-bar"><div class="dex-fill" id="dexFill"></div></div>
-        <div class="dex-body" id="dexBody"></div>
-      </section>
-
-      <!-- 후원 -->
-      <section class="pane" id="pane-don" role="tabpanel">
-        <div class="don-rule">치지직 후원 <b>1,000원</b> = 거위 쓰다듬기 <b>10회</b></div>
-        <div class="pane-head">
-          <span>받은 후원 <b id="donCount">0</b>건 &middot; <b id="donSum">0</b>원 &middot; 쓰다듬기 <b id="donClicks">0</b>회</span>
-          <button class="mini-btn" id="donTestBtn" type="button">테스트 후원</button>
-        </div>
-        <div class="don-feed" id="donFeed"></div>
-        <p class="empty" id="donEmpty">아직 받은 후원이 없습니다.</p>
-        <div class="don-help">
-          <b>연동 방법</b><br>
-          우측 상단 [치지직 로그인] &rarr; 치지직 공식 페이지에서 [동의] &rarr; 돌아오면 자동 연결됩니다.<br>
-          후원 1,000원마다 거위를 10번 쓰다듬어 주고, 그 쓰다듬기에도 즉석 산란 확률이 그대로 적용됩니다.<br>
-          1,000원 미만 잔액은 버림 처리합니다. (예: 2,500원 &rarr; 20회)<br><br>
-          <b>개발자센터에 등록할 리디렉션 URI</b><br>
-          <code id="donRedirect">-</code>
-        </div>
-      </section>
-
-      <!-- 기록 -->
-      <section class="pane" id="pane-stats" role="tabpanel">
-        <div class="stat-grid" id="statGrid"></div>
-        <h3 class="sub">등급별 수집</h3>
-        <div class="tier-stats" id="tierStats"></div>
-      </section>
-
-      <!-- 확률 -->
-      <section class="pane" id="pane-rates" role="tabpanel">
-        <p class="note">거위가 알을 낳을 때 등급이 먼저 정해지고, 같은 등급 안에서는 모든 알이 같은 확률로 나옵니다.</p>
-        <table class="rates" id="ratesTable"></table>
-        <p class="note">쓰다듬을 때마다 <b>0.4%</b> 확률로 그 자리에서 알을 하나 더 낳습니다.</p>
-        <h3 class="sub">순금 <b class="k24-ink">24K</b> 알</h3>
-        <p class="note">아래 알들은 <b>순도 999.9의 24K 순금</b>입니다. 등급이 높을수록 함유량이 늘어납니다.</p>
-        <div class="k24-list" id="k24List"></div>
-      </section>
+      </div>
     </div>
-  </aside>
+
+    <div class="block">
+      <h2 class="block-h">
+        도감
+        <span class="h-sub"><b id="dexOwned">0</b> / <b id="dexTotal">0</b></span>
+        <span class="dex-pct" id="dexPct">0%</span>
+      </h2>
+      <div class="dex-bar"><div class="dex-fill" id="dexFill"></div></div>
+      <div class="scroll-y dex-scroll"><div class="dex-body" id="dexBody"></div></div>
+    </div>
+
+    <div class="block">
+      <h2 class="block-h">순금 <span class="k24-ink">24K</span> 알</h2>
+      <p class="note">아래 알들은 <b>순도 999.9의 24K 순금</b>입니다. 등급이 높을수록 함유량이 늘어납니다.</p>
+      <div class="k24-list" id="k24List"></div>
+    </div>
+  </section>
 </main>
 
 <footer class="footer">
@@ -199,18 +195,23 @@
   <span class="save-hint" id="saveHint">저장됨</span>
 </footer>
 
-<!-- 드롭 연출 -->
+<!-- 후원 알림 배너 (클릭 방해 없음) -->
+<div class="banner-slot" id="bannerSlot" aria-hidden="true"></div>
+
+<!-- 알 획득 알림 : 클릭을 절대 막지 않는다 -->
+<div class="drop-stack" id="dropStack" aria-live="polite"></div>
+<div class="tier-flash" id="tierFlash" aria-hidden="true"></div>
+
+<!-- 알 상세 : 둥지/도감에서 직접 눌렀을 때만 열린다 -->
 <div class="reveal" id="reveal" hidden>
   <div class="reveal-bg"></div>
   <div class="reveal-card" id="revealCard" role="dialog" aria-modal="true"></div>
 </div>
 
-<div class="toast-wrap" id="toastWrap" aria-live="polite"></div>
-
 <script src="vendor/socket.io-2.5.0.slim.js"></script>
-<script src="config.js?v=2"></script>
-<script src="eggs.js?v=2"></script>
-<script src="chzzk.js?v=2"></script>
-<script src="game.js?v=2"></script>
+<script src="config.js?v=3"></script>
+<script src="eggs.js?v=3"></script>
+<script src="chzzk.js?v=3"></script>
+<script src="game.js?v=3"></script>
 </body>
 </html>

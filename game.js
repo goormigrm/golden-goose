@@ -3,9 +3,21 @@
  *   · 거위를 쓰다듬으면 카운터가 오르고, 가끔 그 자리에서 알을 낳는다
  *   · 3분마다 알을 하나 낳는다 (창을 닫아둔 동안도 누적)
  *   · 치지직 후원 1,000원 = 쓰다듬기 10회 (config.js 에서 조정)
+ *
+ * UI 원칙
+ *   1. 알 획득은 **절대 클릭을 막지 않는다.** 모달 없이 알림 카드만 띄우고 스스로 사라진다.
+ *      모달은 사용자가 둥지/도감의 알을 직접 눌렀을 때만 연다.
+ *   2. 화면에 즉석 산란 확률(수치)은 노출하지 않는다. 등급 확률만 공개.
+ *   3. 후원 누적 금액과 누적 쓰다듬기 횟수는 노출하지 않는다(수입 추정 방지). 건수만 공개.
+ *   4. 연동/개발자용 정보는 화면에 두지 않는다.
  * ============================================================ */
 
 const SAVE_KEY = 'gg:save-v1';
+
+/** 후원 밴드에 띄우는 최근 후원 칩 개수 (표시용 창일 뿐, 기록은 전부 보관한다) */
+const DON_TICKER_VISIBLE = 30;
+/** 화면에 동시에 떠 있는 획득 알림 카드 수 */
+const DROP_CARDS_VISIBLE = 4;
 
 /* ---------------- DOM ---------------- */
 const $ = (id) => document.getElementById(id);
@@ -15,33 +27,36 @@ const el = {
   goldGram: $('goldGram'),
   goose: $('gooseBtn'),
   fx: $('fxLayer'),
-  stage: document.querySelector('.stage'),
   timerText: $('timerText'),
   timerFill: $('timerFill'),
+
   bagGrid: $('bagGrid'),
   bagEmpty: $('bagEmpty'),
   bagTotal: $('bagTotal'),
   bagSort: $('bagSort'),
+
   dexBody: $('dexBody'),
   dexOwned: $('dexOwned'),
   dexTotal: $('dexTotal'),
   dexPct: $('dexPct'),
   dexFill: $('dexFill'),
+
   statGrid: $('statGrid'),
   tierStats: $('tierStats'),
   ratesTable: $('ratesTable'),
   k24List: $('k24List'),
-  donRule: $('donRule'),
+
   donFeed: $('donFeed'),
   donEmpty: $('donEmpty'),
   donCount: $('donCount'),
-  donSum: $('donSum'),
-  donClicks: $('donClicks'),
-  donTestBtn: $('donTestBtn'),
-  donRedirect: $('donRedirect'),
+
+  bannerSlot: $('bannerSlot'),
+  dropStack: $('dropStack'),
+  tierFlash: $('tierFlash'),
+
   reveal: $('reveal'),
   revealCard: $('revealCard'),
-  toastWrap: $('toastWrap'),
+
   soundBtn: $('soundBtn'),
   resetBtn: $('resetBtn'),
   saveHint: $('saveHint'),
@@ -61,6 +76,7 @@ function freshState() {
     lastSeen: now,
     startedAt: now,
     sound: true,
+    // sum / clicks 는 내부 기록용. 화면에는 띄우지 않는다.
     don: { count: 0, sum: 0, clicks: 0, feed: [], seen: [] },
   };
 }
@@ -74,9 +90,8 @@ function load() {
     const s = JSON.parse(raw);
     state = Object.assign(freshState(), s);
     state.don = Object.assign({ count: 0, sum: 0, clicks: 0, feed: [], seen: [] }, s.don || {});
-    // 도감에서 사라진 알 id 는 정리 (데이터 개편 대비)
     Object.keys(state.owned).forEach((id) => {
-      if (!EGG_BY_ID[id]) delete state.owned[id];
+      if (!EGG_BY_ID[id]) delete state.owned[id]; // 데이터 개편으로 사라진 알 정리
     });
   } catch (e) {
     console.warn('세이브를 읽지 못해 새로 시작합니다', e);
@@ -107,7 +122,7 @@ function flashSaved() {
   hintTimer = setTimeout(() => el.saveHint.classList.remove('on'), 900);
 }
 
-/* ---------------- 숫자 서식 ---------------- */
+/* ---------------- 서식 ---------------- */
 const nf = (n) => Math.floor(n).toLocaleString('ko-KR');
 
 function fmtGram(g) {
@@ -133,6 +148,9 @@ function fmtClock(ms) {
 
 const esc = (s) =>
   String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+const tierIdx = (key) => TIERS.findIndex((t) => t.key === key);
+const tierOf = (egg) => TIER_BY_KEY[egg.tier];
 
 /* ---------------- 추첨 ---------------- */
 const TIER_WEIGHT_SUM = TIERS.reduce((s, t) => s + t.weight, 0);
@@ -185,12 +203,10 @@ function sfxClick() {
 }
 
 function sfxDrop(tierKey) {
-  const idx = TIERS.findIndex((t) => t.key === tierKey);
+  const idx = tierIdx(tierKey);
   const base = 392;
   const steps = [0, 4, 7, 11, 14, 19].slice(0, Math.max(3, idx + 3));
-  steps.forEach((st, i) => {
-    tone(base * Math.pow(2, st / 12), i * 0.075, 0.34, 'triangle', 0.13);
-  });
+  steps.forEach((st, i) => tone(base * Math.pow(2, st / 12), i * 0.075, 0.34, 'triangle', 0.13));
   if (idx >= 3) {
     steps.forEach((st, i) => tone(base * 2 * Math.pow(2, st / 12), 0.4 + i * 0.06, 0.5, 'sine', 0.1));
   }
@@ -201,6 +217,8 @@ function sfxDonation() {
 }
 
 /* ---------------- 획득 ---------------- */
+let needRender = false; // 렌더는 프레임당 한 번으로 모은다
+
 function addEgg(egg) {
   const now = Date.now();
   const rec = state.owned[egg.id];
@@ -214,7 +232,7 @@ function addEgg(egg) {
   return isNew;
 }
 
-/** n개를 낳는다. source: 'timer' | 'click' | 'offline' | 'donation' */
+/** n개를 낳는다. source: 'timer' | 'click' | 'offline' */
 function layEggs(n, source) {
   if (n <= 0) return;
   const got = [];
@@ -222,37 +240,103 @@ function layEggs(n, source) {
     const e = rollEgg();
     got.push({ egg: e, isNew: addEgg(e) });
   }
-  renderAll();
+  needRender = true;
   save();
 
-  const best = got.reduce((a, b) =>
-    TIERS.findIndex((t) => t.key === b.egg.tier) > TIERS.findIndex((t) => t.key === a.egg.tier) ? b : a
-  );
+  const best = got.reduce((a, b) => (tierIdx(b.egg.tier) > tierIdx(a.egg.tier) ? b : a));
   sfxDrop(best.egg.tier);
 
   el.goose.classList.add('is-lay');
   setTimeout(() => el.goose.classList.remove('is-lay'), 720);
 
-  // 쓰다듬다 나온 흔한 알은 토스트로만, 나머지는 큰 연출
-  const bestIdx = TIERS.findIndex((t) => t.key === best.egg.tier);
-  if (source === 'click' && got.length === 1 && bestIdx <= 1 && !best.isNew) {
-    toast(best.egg);
+  notifyDrop(got, source, best);
+}
+
+/* ---------------- 획득 알림 (클릭을 막지 않음) ---------------- */
+const HOLD_BY_TIER = [3600, 4000, 4800, 5600, 6600, 7600]; // ms
+
+function pushCard(html, tierColor, hold) {
+  const d = document.createElement('div');
+  d.className = 'drop-card';
+  d.style.setProperty('--tc', tierColor);
+  d.style.setProperty('--hold', hold + 'ms');
+  d.innerHTML = html;
+  el.dropStack.appendChild(d);
+  while (el.dropStack.children.length > DROP_CARDS_VISIBLE) el.dropStack.firstChild.remove();
+  setTimeout(() => d.remove(), hold + 500);
+  return d;
+}
+
+function flashScreen(tier) {
+  el.tierFlash.style.setProperty('--fc', tier.color + '55');
+  el.tierFlash.classList.remove('on');
+  void el.tierFlash.offsetWidth; // 리플로우로 애니메이션 재시작
+  el.tierFlash.classList.add('on');
+  setTimeout(() => el.tierFlash.classList.remove('on'), 1200);
+}
+
+function goldLine(egg) {
+  return egg.k24 ? ' &middot; <span class="k24">순금 ' + fmtGram(egg.gram) + '</span>' : '';
+}
+
+function notifyDrop(list, source, best) {
+  const bi = tierIdx(best.egg.tier);
+  const hold = HOLD_BY_TIER[bi] || 4000;
+
+  if (list.length === 1) {
+    const { egg, isNew } = list[0];
+    const t = tierOf(egg);
+    const big = bi >= 2 || isNew;
+    const card = pushCard(
+      eggSvg(egg) +
+        '<div class="dc-body">' +
+        '<span class="dc-tier">' + t.en + ' &middot; ' + t.name + '</span>' +
+        '<b class="dc-name">' + esc(egg.name) + '</b>' +
+        '<span class="dc-meta">보유 ' + nf(state.owned[egg.id].c) + '개' + goldLine(egg) + '</span>' +
+        '</div>' +
+        (isNew ? '<span class="dc-new">NEW</span>' : ''),
+      t.color,
+      hold
+    );
+    if (big) card.classList.add('big');
   } else {
-    showReveal(got, source);
+    const counts = {};
+    let newCount = 0;
+    list.forEach((g) => {
+      counts[g.egg.id] = (counts[g.egg.id] || 0) + 1;
+      if (g.isNew) newCount++;
+    });
+    const ids = Object.keys(counts).sort((a, b) => tierIdx(EGG_BY_ID[b].tier) - tierIdx(EGG_BY_ID[a].tier));
+    const shown = ids.slice(0, 6);
+    const rest = ids.length - shown.length;
+    const t = tierOf(best.egg);
+    const card = pushCard(
+      eggSvg(best.egg) +
+        '<div class="dc-body">' +
+        '<span class="dc-tier">' + (source === 'offline' ? '자리 비운 사이' : '한꺼번에') + '</span>' +
+        '<b class="dc-name">알 ' + nf(list.length) + '개를 낳아뒀습니다</b>' +
+        '<div class="dc-mini">' + shown.map((id) => eggSvg(EGG_BY_ID[id])).join('') +
+        (rest > 0 ? '<span>+' + rest + '종</span>' : '') + '</div>' +
+        '</div>' +
+        (newCount ? '<span class="dc-new">NEW ' + newCount + '</span>' : ''),
+      t.color,
+      Math.max(hold, 6000)
+    );
+    card.classList.add('big');
   }
+
+  if (bi >= 3) flashScreen(tierOf(best.egg));
 }
 
 /* ---------------- 클릭 ---------------- */
 let clickLog = []; // [시각, 횟수]
 
-function applyClicks(n, opts) {
-  opts = opts || {};
+function applyClicks(n) {
   state.clicks += n;
   let drops = 0;
   for (let i = 0; i < n; i++) if (Math.random() < CLICK_DROP_CHANCE) drops++;
   el.clickCount.textContent = nf(state.clicks);
   if (drops > 0) layEggs(drops, 'click');
-  return drops;
 }
 
 function handClick(ev) {
@@ -266,7 +350,7 @@ function handClick(ev) {
   const r = el.fx.getBoundingClientRect();
   let x = r.width / 2;
   let y = r.height * 0.42;
-  if (ev && ev.clientX !== undefined && ev.clientX !== 0) {
+  if (ev && ev.clientX) {
     x = ev.clientX - r.left;
     y = ev.clientY - r.top;
   }
@@ -296,15 +380,14 @@ function feather(x, y) {
 }
 
 /* ---------------- 치지직 후원 → 자동 쓰다듬기 ---------------- */
-let autoQueue = 0; // 남은 자동 쓰다듬기 횟수
+let autoQueue = 0;
 
 function clicksForAmount(amount) {
   return Math.floor(amount / DONATION_UNIT) * CLICKS_PER_1000;
 }
 
 function handleDonation(d) {
-  // 중복 수신 방지
-  if (state.don.seen.indexOf(d.id) >= 0) return;
+  if (state.don.seen.indexOf(d.id) >= 0) return; // 중복 수신 방지
   state.don.seen.push(d.id);
   if (state.don.seen.length > 400) state.don.seen.splice(0, state.don.seen.length - 400);
 
@@ -314,15 +397,7 @@ function handleDonation(d) {
   state.don.count += 1;
   state.don.sum += d.amount;
   state.don.clicks += gain;
-  state.don.feed.unshift({
-    t: Date.now(),
-    nick: d.nick,
-    amount: d.amount,
-    message: d.message,
-    clicks: gain,
-    ignored: ignored,
-    reason: ignored ? '영상 후원 제외' : gain === 0 ? DONATION_UNIT.toLocaleString('ko-KR') + '원 미만' : '',
-  });
+  state.don.feed.unshift({ t: Date.now(), nick: d.nick, message: d.message, gained: gain > 0 });
 
   if (gain > 0) {
     autoQueue += gain;
@@ -330,82 +405,37 @@ function handleDonation(d) {
     donationBanner(d, gain);
   }
   renderDonations();
-  renderStats();
+  needRender = true; // '받은 후원' 타일도 같이 갱신
   save(true);
 }
 
+/** 도착 순간에만 금액을 보여주고 사라진다. 누적 금액은 어디에도 남기지 않는다. */
 function donationBanner(d, gain) {
   const b = document.createElement('div');
   b.className = 'don-banner';
   b.innerHTML =
     '<span class="amt">' + nf(d.amount) + '원</span>' +
-    '<span>' + esc(d.nick) + ' 님 &rarr; 쓰다듬기 ' + nf(gain) + '회!</span>';
-  el.stage.appendChild(b);
-  setTimeout(() => b.remove(), 4800);
+    '<span class="who">' + esc(d.nick) + '</span>' +
+    '<span>&rarr; 쓰다듬기 ' + nf(gain) + '회!</span>';
+  el.bannerSlot.appendChild(b);
+  setTimeout(() => b.remove(), 5000);
 }
 
-/* ---------------- 연출 ---------------- */
-function tierOf(egg) {
-  return TIER_BY_KEY[egg.tier];
-}
-
-function matLine(egg) {
-  if (egg.k24) {
-    return '<div class="reveal-mat is-k24">재질 · <b>' + esc(egg.mat) + '</b><br>순금 함유량 ' +
-      fmtGram(egg.gram) + '</div>';
-  }
-  return '<div class="reveal-mat">재질 · ' + esc(egg.mat) + '</div>';
-}
-
-function showReveal(list, source) {
-  const card = el.revealCard;
-  if (list.length === 1) {
-    const { egg, isNew } = list[0];
-    const t = tierOf(egg);
-    card.style.setProperty('--tc', t.color);
-    card.innerHTML =
-      '<span class="reveal-tier">' + t.en + ' · ' + t.name + '</span>' +
-      eggSvg(egg, 'reveal-egg') +
-      '<h2 class="reveal-name">' + esc(egg.name) + '</h2>' +
-      '<p class="reveal-en">' + esc(egg.en) + '</p>' +
-      matLine(egg) +
-      (isNew ? '<div><span class="reveal-new">NEW · 도감 등록</span></div>' : '') +
-      '<p class="reveal-meta">보유 <b>' + nf(state.owned[egg.id].c) + '</b>개' +
-      (source === 'click' ? ' · 쓰다듬다 낳음' : source === 'donation' ? ' · 후원 보답' : '') + '</p>' +
-      '<button class="reveal-btn" type="button">둥지에 넣기</button>';
-  } else {
-    const counts = {};
-    let newCount = 0;
-    list.forEach((g) => {
-      counts[g.egg.id] = (counts[g.egg.id] || 0) + 1;
-      if (g.isNew) newCount++;
-    });
-    const ids = Object.keys(counts).sort(
-      (a, b) => TIERS.findIndex((t) => t.key === EGG_BY_ID[b].tier) - TIERS.findIndex((t) => t.key === EGG_BY_ID[a].tier)
-    );
-    const best = EGG_BY_ID[ids[0]];
-    card.style.setProperty('--tc', tierOf(best).color);
-    card.innerHTML =
-      '<span class="reveal-tier">' + (source === 'offline' ? '자리 비운 사이' : '한꺼번에') + '</span>' +
-      '<h2 class="reveal-title">거위가 알 ' + nf(list.length) + '개를 낳아뒀습니다</h2>' +
-      '<div class="reveal-list">' + ids.map((id) => eggCell(EGG_BY_ID[id], counts[id], false)).join('') + '</div>' +
-      (newCount ? '<div><span class="reveal-new">NEW ' + newCount + '종</span></div>' : '') +
-      '<button class="reveal-btn" type="button">둥지에 넣기</button>';
-  }
-  el.reveal.hidden = false;
-}
-
+/* ---------------- 알 상세 (사용자가 직접 눌렀을 때만) ---------------- */
 function showEggDetail(egg) {
   const rec = state.owned[egg.id];
+  if (!rec) return;
   const t = tierOf(egg);
   el.revealCard.style.setProperty('--tc', t.color);
   el.revealCard.innerHTML =
-    '<span class="reveal-tier">' + t.en + ' · ' + t.name + '</span>' +
+    '<span class="reveal-tier">' + t.en + ' &middot; ' + t.name + '</span>' +
     eggSvg(egg, 'reveal-egg') +
     '<h2 class="reveal-name">' + esc(egg.name) + '</h2>' +
     '<p class="reveal-en">' + esc(egg.en) + '</p>' +
-    matLine(egg) +
-    '<p class="reveal-meta">보유 <b>' + nf(rec.c) + '</b>개 · 처음 만난 날 ' +
+    (egg.k24
+      ? '<div class="reveal-mat is-k24">재질 &middot; <b>' + esc(egg.mat) + '</b><br>순금 함유량 ' + fmtGram(egg.gram) + '</div>'
+      : '<div class="reveal-mat">재질 &middot; ' + esc(egg.mat) + '</div>') +
+    '<p class="reveal-meta">보유 <b>' + nf(rec.c) + '</b>개 &middot; 처음 만난 날 ' +
     new Date(rec.first).toLocaleDateString('ko-KR') + '</p>' +
     '<button class="reveal-btn" type="button">닫기</button>';
   el.reveal.hidden = false;
@@ -413,16 +443,6 @@ function showEggDetail(egg) {
 
 function closeReveal() {
   el.reveal.hidden = true;
-}
-
-function toast(egg) {
-  const t = tierOf(egg);
-  const d = document.createElement('div');
-  d.className = 'toast';
-  d.style.setProperty('--tc', t.color);
-  d.innerHTML = eggSvg(egg) + '<span>' + esc(egg.name) + '</span>';
-  el.toastWrap.appendChild(d);
-  setTimeout(() => d.remove(), 3000);
 }
 
 /* ---------------- 렌더 ---------------- */
@@ -440,20 +460,13 @@ function eggCell(egg, count, locked) {
   );
 }
 
-function ownedIds() {
-  return Object.keys(state.owned);
-}
-
-function totalEggs() {
-  return ownedIds().reduce((s, id) => s + state.owned[id].c, 0);
-}
-
-function totalGold() {
-  return ownedIds().reduce((s, id) => {
+const ownedIds = () => Object.keys(state.owned);
+const totalEggs = () => ownedIds().reduce((s, id) => s + state.owned[id].c, 0);
+const totalGold = () =>
+  ownedIds().reduce((s, id) => {
     const e = EGG_BY_ID[id];
     return e && e.k24 ? s + e.gram * state.owned[id].c : s;
   }, 0);
-}
 
 function renderBag() {
   const ids = ownedIds();
@@ -463,8 +476,7 @@ function renderBag() {
   ids.sort((a, b) => {
     if (mode === 'recent') return state.owned[b].last - state.owned[a].last;
     if (mode === 'count') return state.owned[b].c - state.owned[a].c;
-    const d =
-      TIERS.findIndex((t) => t.key === EGG_BY_ID[b].tier) - TIERS.findIndex((t) => t.key === EGG_BY_ID[a].tier);
+    const d = tierIdx(EGG_BY_ID[b].tier) - tierIdx(EGG_BY_ID[a].tier);
     return d !== 0 ? d : state.owned[b].c - state.owned[a].c;
   });
   el.bagGrid.innerHTML = ids.map((id) => eggCell(EGG_BY_ID[id], state.owned[id].c, false)).join('');
@@ -484,8 +496,9 @@ function renderDex() {
       const have = pool.filter((e) => state.owned[e.id]).length;
       return (
         '<div class="dex-group" style="--tc:' + t.color + '">' +
-        '<div class="dex-group-head"><span class="bar"></span><span style="color:' + t.color + '">' +
-        t.name + '</span><span class="n">' + have + ' / ' + pool.length + '</span></div>' +
+        '<div class="dex-group-head"><span class="bar"></span>' +
+        '<span style="color:' + t.color + '">' + t.name + '</span>' +
+        '<span class="n">' + have + ' / ' + pool.length + '</span></div>' +
         '<div class="egg-grid">' +
         pool.map((e) => eggCell(e, state.owned[e.id] ? state.owned[e.id].c : 0, !state.owned[e.id])).join('') +
         '</div></div>'
@@ -495,22 +508,17 @@ function renderDex() {
 }
 
 function renderStats() {
-  const gold = totalGold();
+  // 후원 누적 금액 / 누적 쓰다듬기 횟수는 수입이 추정되므로 넣지 않는다.
   const cards = [
     { k: '쓰다듬기', v: nf(state.clicks) },
     { k: '모은 알', v: nf(totalEggs()) },
     { k: '도감', v: ownedIds().length + '<small>/ ' + EGGS.length + '</small>' },
     { k: '함께한 시간', v: fmtDur(Date.now() - state.startedAt) },
-    { k: '보유 순금 24K', v: fmtGram(gold), gold: true },
-    { k: '후원으로 받은 쓰다듬기', v: nf(state.don.clicks), gold: true },
-    { k: '받은 후원', v: nf(state.don.count) + '<small>건</small>' },
-    { k: '후원 합계', v: nf(state.don.sum) + '<small>원</small>' },
+    { k: '보유 순금 24K', v: fmtGram(totalGold()), gold: true },
+    { k: '받은 후원', v: nf(state.don.count) + '<small>건</small>', gold: true },
   ];
   el.statGrid.innerHTML = cards
-    .map(
-      (c) =>
-        '<div class="stat' + (c.gold ? ' gold' : '') + '"><div class="k">' + c.k + '</div><div class="v">' + c.v + '</div></div>'
-    )
+    .map((c) => '<div class="stat' + (c.gold ? ' gold' : '') + '"><div class="k">' + c.k + '</div><div class="v">' + c.v + '</div></div>')
     .join('');
 
   const total = totalEggs() || 1;
@@ -553,21 +561,20 @@ function renderRates() {
     .join('');
 }
 
+/** 후원 밴드 — 닉네임과 메시지만. 금액은 도착 순간의 배너에만 잠깐 뜬다. */
 function renderDonations() {
   const f = state.don.feed;
   el.donCount.textContent = nf(state.don.count);
-  el.donSum.textContent = nf(state.don.sum);
-  el.donClicks.textContent = nf(state.don.clicks);
   el.donEmpty.hidden = f.length > 0;
+  const goldEgg = EGG_BY_ID.gold24k;
   el.donFeed.innerHTML = f
+    .slice(0, DON_TICKER_VISIBLE)
     .map(
       (d) =>
-        '<div class="don-item' + (d.clicks ? '' : ' ignored') + '">' +
+        '<span class="don-chip">' + eggSvg(goldEgg) +
         '<span class="who">' + esc(d.nick) + '</span>' +
-        '<span class="won">' + nf(d.amount) + '원</span>' +
-        '<span class="msg">' + esc(d.message || (d.reason ? '(' + d.reason + ')' : '')) + '</span>' +
-        '<span class="gain">' + (d.clicks ? '+' + nf(d.clicks) + '회' : '무시') + '</span>' +
-        '</div>'
+        (d.message ? '<span class="msg">' + esc(d.message) + '</span>' : '') +
+        '</span>'
     )
     .join('');
 }
@@ -587,12 +594,12 @@ function renderAll() {
 
 /* ---------------- 루프 ---------------- */
 let lastTick = performance.now();
+let statTick = 0;
 
 function tick(now) {
   const dt = Math.min(1000, now - lastTick);
   lastTick = now;
 
-  // 알 낳기 타이머
   state.progress += dt;
   let lay = 0;
   while (state.progress >= DROP_INTERVAL) {
@@ -601,8 +608,7 @@ function tick(now) {
   }
   if (lay > 0) layEggs(lay, 'timer');
 
-  const left = DROP_INTERVAL - state.progress;
-  el.timerText.textContent = fmtClock(left);
+  el.timerText.textContent = fmtClock(DROP_INTERVAL - state.progress);
   el.timerFill.style.width = (state.progress / DROP_INTERVAL) * 100 + '%';
 
   // 후원 자동 쓰다듬기 소진 (많이 들어와도 6초 안에 다 처리)
@@ -616,7 +622,10 @@ function tick(now) {
       const r = el.fx.getBoundingClientRect();
       popText('+' + n, r.width * (0.3 + Math.random() * 0.4), r.height * (0.3 + Math.random() * 0.3));
     }
-    if (autoQueue === 0) save(true);
+    if (autoQueue === 0) {
+      needRender = true;
+      save(true);
+    }
   }
 
   // 초당 쓰다듬기
@@ -626,15 +635,28 @@ function tick(now) {
   for (let i = 0; i < clickLog.length; i++) per += clickLog[i][1];
   el.cps.textContent = per.toFixed(1);
 
+  if (needRender) {
+    needRender = false;
+    renderGold();
+    renderBag();
+    renderDex();
+    renderStats();
+  }
+
+  // '함께한 시간'만 주기적으로 갱신
+  if (now - statTick > 30000) {
+    statTick = now;
+    renderStats();
+  }
+
   requestAnimationFrame(tick);
 }
 
-/* ---------------- 치지직 배선 ---------------- */
+/* ---------------- 치지직 ---------------- */
 function setChzUi() {
   const has = Chzzk.hasToken();
   el.chzLogin.hidden = has;
   el.chzLogout.hidden = !has;
-  el.chzLogin.textContent = '치지직 로그인';
 }
 
 function setStatus(s, detail) {
@@ -647,16 +669,10 @@ function setStatus(s, detail) {
 async function initChzzk() {
   Chzzk.onStatus(setStatus);
   Chzzk.onDonation(handleDonation);
-  if (el.donRedirect) el.donRedirect.textContent = Chzzk.redirectUri();
-
-  const justLoggedIn = await Chzzk.handleOAuthRedirect();
+  await Chzzk.handleOAuthRedirect();
   setChzUi();
-  if (Chzzk.hasToken()) {
-    Chzzk.connect();
-  } else {
-    setStatus('off');
-  }
-  if (justLoggedIn) setChzUi();
+  if (Chzzk.hasToken()) Chzzk.connect();
+  else setStatus('off');
 }
 
 /* ---------------- 초기화 ---------------- */
@@ -676,27 +692,16 @@ function init() {
   renderAll();
   renderRates();
 
-  // 거위
   el.goose.addEventListener('click', handClick);
 
-  // 알 상세
+  // 알 상세 — 둥지/도감에서 직접 눌렀을 때만
   document.addEventListener('click', (e) => {
     const cell = e.target.closest && e.target.closest('.egg-cell[data-egg]');
-    if (cell && !el.reveal.contains(cell)) showEggDetail(EGG_BY_ID[cell.dataset.egg]);
-  });
-
-  // 탭
-  document.querySelectorAll('.tab').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('.tab').forEach((b) => b.classList.toggle('is-on', b === btn));
-      document.querySelectorAll('.pane').forEach((p) => p.classList.toggle('is-on', p.id === 'pane-' + btn.dataset.tab));
-      if (btn.dataset.tab === 'stats') renderStats();
-    });
+    if (cell) showEggDetail(EGG_BY_ID[cell.dataset.egg]);
   });
 
   el.bagSort.addEventListener('change', renderBag);
 
-  // 연출 닫기
   el.reveal.addEventListener('click', (e) => {
     if (e.target.classList.contains('reveal-btn') || e.target.classList.contains('reveal-bg')) closeReveal();
   });
@@ -704,7 +709,6 @@ function init() {
     if (e.key === 'Escape') closeReveal();
   });
 
-  // 소리 / 초기화
   el.soundBtn.addEventListener('click', () => {
     state.sound = !state.sound;
     el.soundBtn.classList.toggle('is-off', !state.sound);
@@ -720,7 +724,6 @@ function init() {
     save(true);
   });
 
-  // 치지직
   el.chzLogin.addEventListener('click', () => {
     if (Chzzk.hasToken()) Chzzk.connect();
     else Chzzk.startLogin();
@@ -729,27 +732,14 @@ function init() {
     Chzzk.logout();
     setChzUi();
   });
-  el.donTestBtn.addEventListener('click', () => {
-    const v = prompt('테스트 후원 금액(원)', '5000');
-    if (v === null) return;
-    const amount = Math.max(0, Math.floor(Number(v) || 0));
-    handleDonation({
-      id: 'test|' + Date.now(),
-      nick: '테스트후원',
-      amount: amount,
-      message: '테스트입니다',
-      isVideo: false,
-    });
-  });
 
-  // 저장
   window.addEventListener('beforeunload', () => save(true));
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) save(true);
   });
   setInterval(() => save(true), 15000);
 
-  if (offline > 0) setTimeout(() => layEggs(offline, 'offline'), 400);
+  if (offline > 0) setTimeout(() => layEggs(offline, 'offline'), 500);
 
   requestAnimationFrame(tick);
   initChzzk();
@@ -757,9 +747,16 @@ function init() {
 
 document.addEventListener('DOMContentLoaded', init);
 
-// 디버그용
+// 콘솔 전용 디버그 (화면에는 노출하지 않는다)
 window.__gg = {
   state: () => state,
   lay: (n) => layEggs(n || 1, 'timer'),
-  donate: (won) => handleDonation({ id: 'dbg|' + Date.now(), nick: '디버그', amount: won, message: '', isVideo: false }),
+  donate: (won, nick, msg) =>
+    handleDonation({
+      id: 'dbg|' + Date.now() + '|' + Math.random(),
+      nick: nick || '테스트후원',
+      amount: won,
+      message: msg || '',
+      isVideo: false,
+    }),
 };
