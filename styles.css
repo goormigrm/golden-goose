@@ -133,8 +133,8 @@ button,select,input{font:inherit;color:inherit}
 /* ═══════════ 후원 밴드 (가장 눈에 띄는 자리) ═══════════ */
 .donband{
   position:sticky;top:59px;z-index:25;
-  display:flex;align-items:center;gap:16px;
-  padding:11px clamp(14px,2.4vw,30px);
+  display:flex;align-items:center;gap:18px;
+  padding:15px clamp(14px,2.4vw,30px);
   background:linear-gradient(100deg,rgba(0,199,60,.16),rgba(0,199,60,.05) 42%,rgba(0,199,60,.02));
   border-bottom:1px solid rgba(0,199,60,.28);
   backdrop-filter:blur(10px);
@@ -149,9 +149,9 @@ button,select,input{font:inherit;color:inherit}
   70%{box-shadow:0 0 0 11px rgba(0,224,74,0)}
   100%{box-shadow:0 0 0 0 rgba(0,224,74,0)}
 }
-.dr-text{font-size:14.5px;font-weight:800;color:#d8f7e2;white-space:nowrap;letter-spacing:.01em}
+.dr-text{font-size:16px;font-weight:800;color:#d8f7e2;white-space:nowrap;letter-spacing:.01em}
 .dr-text b{
-  font-size:17px;font-weight:900;
+  font-size:20px;font-weight:900;
   background:linear-gradient(100deg,#a8ffc8,#5cf58c);
   -webkit-background-clip:text;background-clip:text;color:transparent;
 }
@@ -165,26 +165,26 @@ button,select,input{font:inherit;color:inherit}
 .donband-feed::-webkit-scrollbar{display:none}
 .donband-feed:empty{display:none}
 .don-chip{
-  display:inline-flex;align-items:center;gap:7px;flex:none;max-width:290px;
-  padding:6px 12px;border-radius:99px;
-  background:rgba(0,0,0,.3);border:1px solid rgba(0,199,60,.3);
-  font-size:12.5px;animation:chipIn .35s cubic-bezier(.2,1.3,.4,1);
+  display:inline-flex;align-items:center;gap:9px;flex:none;max-width:340px;
+  padding:9px 15px;border-radius:99px;
+  background:rgba(0,0,0,.32);border:1px solid rgba(0,199,60,.32);
+  font-size:13.5px;animation:chipIn .35s cubic-bezier(.2,1.3,.4,1);
 }
-.don-chip .egg{width:15px;height:auto;flex:none}
+.don-chip .egg{width:19px;height:auto;flex:none}
 .don-chip .who{font-weight:900;color:#8ef0ae;white-space:nowrap}
 .don-chip .msg{color:#c3bba9;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
 @keyframes chipIn{from{opacity:0;transform:translateX(-14px) scale(.9)}to{opacity:1;transform:none}}
 
 .donband-empty{
-  flex:1;min-width:0;margin:0;font-size:12.5px;color:rgba(200,216,205,.55);
+  flex:1;min-width:0;margin:0;font-size:13.5px;color:rgba(200,216,205,.55);
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
 }
 .donband-empty[hidden]{display:none}
 .donband-count{
-  flex:none;font-size:12px;color:rgba(216,247,226,.62);font-weight:700;white-space:nowrap;
-  padding-left:14px;border-left:1px solid rgba(0,199,60,.24);
+  flex:none;font-size:13px;color:rgba(216,247,226,.62);font-weight:700;white-space:nowrap;
+  padding-left:16px;border-left:1px solid rgba(0,199,60,.24);
 }
-.donband-count b{color:#8ef0ae;font-size:14px;font-weight:900;font-variant-numeric:tabular-nums}
+.donband-count b{color:#8ef0ae;font-size:17px;font-weight:900;font-variant-numeric:tabular-nums}
 
 @media (max-width:900px){
   .donband{flex-wrap:wrap;gap:9px;top:auto;position:static}
@@ -206,7 +206,7 @@ button,select,input{font:inherit;color:inherit}
 .col-right{grid-area:right}
 
 @media (min-width:1241px){
-  .mid-inner{position:sticky;top:118px}
+  .mid-inner{position:sticky;top:150px}
 }
 @media (max-width:1240px){
   .deck{
@@ -456,7 +456,7 @@ button,select,input{font:inherit;color:inherit}
 
 /* ═══════════ 후원 배너 (등장 알림) ═══════════ */
 .banner-slot{
-  position:fixed;left:50%;top:112px;transform:translateX(-50%);
+  position:fixed;left:50%;top:152px;transform:translateX(-50%);
   z-index:55;pointer-events:none;display:flex;flex-direction:column;gap:8px;align-items:center;
   width:max-content;max-width:min(92vw,620px);
 }
@@ -469,13 +469,11 @@ button,select,input{font:inherit;color:inherit}
   box-shadow:0 16px 40px rgba(0,0,0,.5), 0 0 40px -12px rgba(0,224,74,.7);
   animation:banIn .35s cubic-bezier(.2,1.35,.4,1);
 }
-.don-banner.bump{animation:banBump .28s ease}
-.don-banner.out{animation:banOut .45s ease forwards}
-.don-banner .more{
-  background:rgba(4,36,15,.28);border-radius:8px;padding:2px 8px;
-  font-size:12px;font-weight:800;white-space:nowrap;
+.don-banner.out{animation:banOut .42s ease forwards}
+.don-banner .queued{
+  background:rgba(4,36,15,.26);border-radius:8px;padding:2px 8px;
+  font-size:11.5px;font-weight:800;white-space:nowrap;opacity:.8;
 }
-@keyframes banBump{0%{transform:scale(1)}45%{transform:scale(1.045)}100%{transform:scale(1)}}
 .don-banner .who{max-width:14em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .don-banner .amt{
   background:rgba(255,255,255,.92);border-radius:8px;padding:2px 9px;

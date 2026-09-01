@@ -448,36 +448,41 @@ function handleDonation(d) {
 }
 
 /* 도착 순간에만 금액을 보여주고 사라진다. 누적 금액은 어디에도 남기지 않는다.
- * 후원이 몰아칠 때 배너가 쌓여 카운터를 가리지 않도록 **한 줄로 합쳐서** 갱신한다. */
-let bannerEl = null;
-let bannerExtra = 0;
-let bannerTimer = null;
+ * 후원은 **하나도 빠뜨리지 않고 전부** 보여준다. 몰아칠 때는 합치지 않고 큐에 쌓아
+ * 한 건씩 차례로 띄우며, 밀린 만큼 표시 시간을 줄여 밀림이 무한정 길어지지 않게 한다. */
+const BANNER_HOLD = 2600;      // 평소 한 건이 떠 있는 시간(ms)
+const BANNER_HOLD_MIN = 1100;  // 많이 밀렸을 때까지 줄일 수 있는 최소 시간
+const bannerQueue = [];
+let bannerBusy = false;
 
 function donationBanner(d, gain) {
-  if (bannerEl) bannerExtra += 1;
-  else {
-    bannerExtra = 0;
-    bannerEl = document.createElement('div');
-    bannerEl.className = 'don-banner';
-    el.bannerSlot.appendChild(bannerEl);
-  }
-  bannerEl.innerHTML =
-    '<span class="amt">' + nf(d.amount) + '원</span>' +
-    '<span class="who">' + esc(d.nick) + '</span>' +
-    '<span>&rarr; 쓰다듬기 ' + nf(gain) + '회!</span>' +
-    (bannerExtra ? '<span class="more">외 ' + nf(bannerExtra) + '명</span>' : '');
-  bannerEl.classList.remove('bump');
-  void bannerEl.offsetWidth;
-  bannerEl.classList.add('bump');
+  bannerQueue.push({ amount: d.amount, nick: d.nick, gain: gain });
+  pumpBanner();
+}
 
-  clearTimeout(bannerTimer);
-  const b = bannerEl;
-  bannerTimer = setTimeout(() => {
+function pumpBanner() {
+  if (bannerBusy || bannerQueue.length === 0) return;
+  bannerBusy = true;
+  const q = bannerQueue.shift();
+
+  // 뒤에 밀린 게 많을수록 빠르게 넘긴다 (그래도 전부 다 보여준다)
+  const hold = Math.max(BANNER_HOLD_MIN, BANNER_HOLD - bannerQueue.length * 260);
+
+  const b = document.createElement('div');
+  b.className = 'don-banner';
+  b.innerHTML =
+    '<span class="amt">' + nf(q.amount) + '원</span>' +
+    '<span class="who">' + esc(q.nick) + '</span>' +
+    '<span>&rarr; 쓰다듬기 ' + nf(q.gain) + '회!</span>' +
+    (bannerQueue.length ? '<span class="queued">+' + nf(bannerQueue.length) + ' 대기</span>' : '');
+  el.bannerSlot.appendChild(b);
+
+  setTimeout(() => {
     b.classList.add('out');
-    setTimeout(() => b.remove(), 450);
-    bannerEl = null;
-    bannerExtra = 0;
-  }, 3600);
+    setTimeout(() => b.remove(), 420);
+    bannerBusy = false;
+    pumpBanner();
+  }, hold);
 }
 
 /* ---------------- 데모 후원 (게임 소개용) ----------------
