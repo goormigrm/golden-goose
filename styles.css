@@ -245,11 +245,10 @@ button,select,input{font:inherit;color:inherit}
   .col::-webkit-scrollbar-thumb:hover{background:rgba(255,225,160,.26)}
   /* 거위 칸은 스크롤이 필요 없다 — 항상 한 화면에 들어오도록 크기를 맞춘다 */
   .col-mid{align-items:center;justify-content:center;overflow:hidden;padding-right:0}
-  .mid-inner{position:static;gap:7px}
-  .mid-inner .goose-btn{width:min(384px,78vw,34vh)}
+  .mid-inner{position:static;gap:5px}
+  .mid-inner .goose-btn{width:min(460px,80vw,40vh)}
   .mid-inner .count{font-size:clamp(38px,5.2vh,72px)}
   .mid-inner .count-label{font-size:11.5px}
-  .mid-inner .timer-hint{margin-top:7px}
 
   /* 오른쪽 칸은 둥지·도감이 남은 높이를 나눠 갖는다 → 칸 안에 또 스크롤이 생기지 않는다 */
   .col-right{display:flex;flex-direction:column;overflow:hidden;padding-right:0}
@@ -263,9 +262,11 @@ button,select,input{font:inherit;color:inherit}
 /* 세로가 짧은 PC 화면(노트북 등)에서는 거위를 한 단계 더 줄여 잘리지 않게 한다 */
 @media (min-width:1241px) and (max-height:830px){
   .mid-inner{gap:5px}
-  .mid-inner .goose-btn{width:min(384px,78vw,30vh)}
+  .mid-inner{gap:4px}
+  .mid-inner .goose-btn{width:min(430px,80vw,32vh)}
   .mid-inner .count{font-size:clamp(30px,4.4vh,60px)}
-  .mid-inner .timer-hint{margin-top:5px;line-height:1.5}
+  .mid-inner .k24-strip{font-size:13px;padding:9px 18px}
+  .mid-inner .k24-strip b{font-size:15px}
 }
 
 /* 좁은 화면에서는 페이지가 통째로 스크롤되므로 밴드도 같이 흘러간다 (겹침 방지) */
@@ -371,14 +372,17 @@ button,select,input{font:inherit;color:inherit}
 
 /* 24K 스트립 */
 .k24-strip{
-  display:flex;align-items:center;justify-content:center;gap:13px;flex-wrap:wrap;
-  padding:9px 18px;border-radius:99px;
-  background:linear-gradient(100deg,rgba(255,201,77,.1),rgba(255,201,77,.03));
-  border:1px solid rgba(255,201,77,.22);
-  font-size:12px;color:#d9c9a6;
+  display:flex;align-items:center;justify-content:center;gap:15px;flex-wrap:wrap;
+  padding:11px 22px;border-radius:99px;
+  background:linear-gradient(100deg,rgba(255,201,77,.13),rgba(255,201,77,.04));
+  border:1px solid rgba(255,201,77,.3);
+  font-size:14.5px;color:#e2d3b0;font-weight:700;letter-spacing:.01em;
 }
-.k24-strip b{color:var(--gold);font-weight:900;font-variant-numeric:tabular-nums}
-.k24-strip i{width:1px;height:12px;background:rgba(255,201,77,.25);display:block}
+.k24-strip b{
+  color:var(--gold);font-weight:900;font-size:17px;font-variant-numeric:tabular-nums;
+  text-shadow:0 0 14px rgba(255,201,77,.35);
+}
+.k24-strip i{width:1px;height:15px;background:rgba(255,201,77,.3);display:block}
 
 /* 클릭 이펙트 */
 .fx-layer{position:absolute;inset:0;pointer-events:none;z-index:3;overflow:visible}
@@ -433,16 +437,15 @@ button,select,input{font:inherit;color:inherit}
 
 /* 타이머 */
 .timer-box{width:100%;max-width:460px;margin-top:2px}
-.timer-head{display:flex;justify-content:space-between;align-items:baseline;font-size:12.5px;color:var(--muted);margin-bottom:7px}
-.timer-head strong{color:var(--gold);font-size:17px;font-variant-numeric:tabular-nums;letter-spacing:.04em}
+.timer-head{display:flex;justify-content:space-between;align-items:baseline;font-size:13px;color:var(--muted);margin-bottom:7px}
+.timer-head em{font-style:normal;font-size:11.5px;color:#7d7260;margin-left:8px}
+.timer-head strong{color:var(--gold);font-size:18px;font-variant-numeric:tabular-nums;letter-spacing:.04em}
 .timer-bar{height:8px;border-radius:99px;background:rgba(255,255,255,.06);overflow:hidden;border:1px solid var(--line)}
 .timer-fill{
   height:100%;width:0;border-radius:99px;
   background:linear-gradient(90deg,var(--gold-deep),var(--gold-2) 45%,#ffe08a);
   box-shadow:0 0 14px rgba(255,201,77,.42);transition:width .2s linear;
 }
-.timer-hint{margin:9px 0 0;font-size:11.5px;color:var(--muted);line-height:1.6;text-align:center}
-.timer-hint b{color:#e6d5b3}
 
 /* ═══════════ 알 그리드 ═══════════ */
 .egg-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(82px,1fr));gap:9px}
