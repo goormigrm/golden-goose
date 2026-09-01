@@ -1,7 +1,7 @@
 # HANDOVER — GOLDEN GOOSE 24K
 
 > 다음 세션(사람/AI 누구든)이 이 문서만 읽고 이어서 작업할 수 있도록 남기는 인수인계 문서.
-> 마지막 업데이트: **2026-09-01** · 상태: **개발 완료, 로컬 검증 완료, 저장소 생성·배포 전**
+> 마지막 업데이트: **2026-09-01** · 상태: **개발 완료, GitHub Pages 배포 완료, 치지직 실연동 확인 전**
 
 ## 1. 한눈에 보기
 
@@ -9,15 +9,19 @@
 |---|---|
 | 무엇 | 순금 24K 황금알을 낳는 거위 — 클릭 카운터 + 랜덤 등급 드롭 + 도감 수집형 클리커 |
 | 원안 | Steam [Banana](https://store.steampowered.com/app/2923300/Banana/) — 클릭 카운터 / 시간마다 등급 드롭 / 인벤토리 수집 구조를 그대로 차용 |
-| 라이브 | https://goormigrm.github.io/golden-goose/ *(저장소 생성 후)* |
-| 저장소 | (미생성) — 이름 후보와 이유는 §6 |
+| 라이브 | https://goormigrm.github.io/golden-goose/ |
+| 저장소 | https://github.com/goormigrm/golden-goose (main push → Pages 자동 반영, 빌드 없음) |
 | 스택 | **빌드 없음.** 정적 HTML/CSS/바닐라 JS + socket.io-client **2.5.0 고정**(vendor 폴더) |
 | 치지직 앱 | 먹방룰렛과 **같은 앱·같은 프록시 공유** · Client ID `95337781-0490-4c9b-ac9a-9577a9ef4db0` |
 | 프록시 | https://mukbang-proxy.1117tkdrms.workers.dev (Cloudflare, 계정 1117tkdrms) |
 | 관련 저장소 | [mukbang-roulette](https://github.com/goormigrm/mukbang-roulette) — 치지직 연동 원본, `proxy/worker.js` 정본 |
 
 **검증 상태**: 로컬 서버에서 클릭·정기 산란·즉석 산란·도감·후원 환산(테스트 후원)·저장/복원 전부 동작 확인.
-**아직 안 한 것**: GitHub 저장소 생성 및 Pages 배포, **개발자센터에 새 리디렉션 URI 등록**, 실도네 E2E.
+**배포 검증(2026-09-01)**: 정적 파일 7개 전부 200, 콘솔 에러 없음, `io`/`Chzzk`/`__gg` 로드 확인,
+사이트가 계산한 리디렉션 URI = `https://goormigrm.github.io/golden-goose/`,
+프록시 워커가 이 오리진을 CORS 허용함(`OPTIONS /open/v1/sessions/auth` → `Access-Control-Allow-Origin` 확인).
+
+**아직 안 한 것**: **개발자센터에 리디렉션 URI 등록**(안 하면 로그인에서 튕김), 치지직 로그인 성공 확인, 실도네 E2E.
 
 ## 2. 확정된 규칙
 
@@ -64,10 +68,10 @@
 
 ## 5. 다음 할 일 (우선순위순)
 
-1. **GitHub 저장소 생성 + push** → Settings → Pages → `Deploy from a branch` / `main` / `/(root)`
-2. **개발자센터에 리디렉션 URI 추가** — `https://goormigrm.github.io/<저장소이름>/`
+1. ~~GitHub 저장소 생성 + Pages 배포~~ **완료** (2026-09-01, 저장소명 `golden-goose`)
+2. **개발자센터에 리디렉션 URI 추가** — `https://goormigrm.github.io/golden-goose/`
    먹방룰렛 앱에 URI를 하나 더 등록하는 방식(권장). 앱을 나누고 싶으면 새 앱 등록 후 `config.js`의 `PRESET_CLIENT_ID` 교체.
-   ⚠ 저장소 이름이 `golden-goose`가 아니면 README·공지글의 주소도 함께 고칠 것.
+   등록 후 사이트에서 [치지직 로그인] → 동의 → 배지가 🟢 후원 수신 중이 되는지 확인.
 3. **실도네 E2E** — 방송 켜고 소액 후원 → 배너/카운터/후원 탭 반영 확인
 4. (선택) 워커 `ALLOWED_ORIGINS`를 쓰기로 했다면 이 사이트 오리진도 추가해야 함 (현재는 빈 배열 = 전체 허용)
 5. (아이디어, 미구현) 알 판매·업그레이드·부화, 도감 완성 보상, 후원자별 기여 순위, OBS용 컴팩트 모드
