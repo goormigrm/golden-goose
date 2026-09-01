@@ -241,7 +241,7 @@ function sfxDonation() {
 // 1번 — 농가 아침 느낌의 통기타. 78 BPM, G장조 G-D-Em-C
 const FOLK = {
   bpm: 78,
-  vol: 0.075,
+  vol: 0.13,   // 효과음에 비해 너무 묻혀서 올림
   prog: [
     { bass: 'G2', notes: ['G3', 'B3', 'D4', 'G4'] },
     { bass: 'D2', notes: ['A3', 'D4', 'F#4', 'A4'] },
@@ -255,7 +255,7 @@ const FOLK = {
 // 2번 — 긴장감 있고 신나는 EDM. 128 BPM, A단조 Am-F-C-G
 const EDM = {
   bpm: 128,
-  vol: 0.055,
+  vol: 0.095,  // 킥이 있어 어쿠스틱보다는 한 단계 낮게
   prog: [
     { bass: 'A2', notes: ['A4', 'C5', 'E5', 'C5'] },
     { bass: 'F2', notes: ['F4', 'A4', 'C5', 'A4'] },
