@@ -553,6 +553,26 @@ button,select,input{font:inherit;color:inherit}
 .dex-group-head .bar{width:3px;height:13px;border-radius:2px;background:var(--tc)}
 .dex-group-head .n{margin-left:auto;color:var(--muted);font-weight:600;font-variant-numeric:tabular-nums}
 
+/* 신화·전설은 뽑은 사람을 전부 보여준다 (칸 대신 가로 줄) */
+.dex-hi{display:flex;flex-direction:column;gap:7px}
+.dex-row{
+  display:flex;align-items:flex-start;gap:11px;padding:9px 11px;border-radius:12px;
+  background:var(--surface-2);border:1px solid var(--line);cursor:pointer;transition:.15s;
+}
+.dex-row:hover{border-color:var(--tc);box-shadow:0 6px 18px rgba(0,0,0,.32)}
+.dex-row.locked{opacity:.4;cursor:default}
+.dex-row.locked:hover{border-color:var(--line);box-shadow:none}
+.dex-row .egg{width:34px;height:auto;flex:none;filter:drop-shadow(0 4px 8px rgba(0,0,0,.45))}
+.dex-row.locked .egg{filter:brightness(0) saturate(0) opacity(.34)}
+.dex-row-body{flex:1;min-width:0}
+.dex-row-name{display:flex;align-items:baseline;gap:7px;font-size:13px;font-weight:800;color:#e9dfc9}
+.dex-row-name .q{font-size:11px;font-weight:700;color:var(--gold);font-variant-numeric:tabular-nums}
+.dex-row .who-list{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}
+.dex-row .who-list .by{
+  display:inline-block;width:auto;margin:0;padding:3px 8px;border-radius:7px;font-size:10.5px;
+}
+.dex-row .who-none{margin-top:5px;font-size:10.5px;color:#6f6553}
+
 /* ═══════════ 기록 ═══════════ */
 .stat-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
 .stat{background:var(--surface-2);border:1px solid var(--line);border-radius:var(--r);padding:11px 12px}

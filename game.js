@@ -89,8 +89,9 @@ function freshState() {
     progress: 0, // 다음 알까지 누적된 ms
     lastSeen: now,
     startedAt: now,
-    sound: true, // 효과음
-    bgm: true,   // 배경음
+    sound: true,  // 효과음
+    bgm: true,    // 배경음
+    bgmTrack: 1,  // 1 어쿠스틱 · 2 EDM
     // sum / clicks 는 내부 기록용. 화면에는 띄우지 않는다.
     don: { count: 0, sum: 0, clicks: 0, feed: [], seen: [] },
   };
@@ -237,18 +238,38 @@ function sfxDonation() {
  * 음원 파일을 쓰지 않고 WebAudio 로 직접 합성한다 — 저작권 문제가 원천적으로 없고,
  * 파일도 받지 않으니 저장소가 가벼우며 오프라인에서도 그대로 돈다.
  * 78 BPM, G장조 G–D–Em–C 진행을 통기타 핑거피킹처럼 뜯는다. 농가 아침 느낌. */
-const BGM_BPM = 78;
-const BGM_VOL = 0.075;
-const BGM_BEAT = 60 / BGM_BPM;
-const BGM_BAR = BGM_BEAT * 4;
-const BGM_PROG = [
-  { bass: 'G2', notes: ['G3', 'B3', 'D4', 'G4'] },
-  { bass: 'D2', notes: ['A3', 'D4', 'F#4', 'A4'] },
-  { bass: 'E2', notes: ['E3', 'G3', 'B3', 'E4'] },
-  { bass: 'C3', notes: ['C3', 'E3', 'G3', 'C4'] },
-];
-// 8분음표 8개. -1 은 베이스 줄
-const BGM_PATTERN = [-1, 2, 1, 3, 0, 2, 3, 1];
+// 1번 — 농가 아침 느낌의 통기타. 78 BPM, G장조 G-D-Em-C
+const FOLK = {
+  bpm: 78,
+  vol: 0.075,
+  prog: [
+    { bass: 'G2', notes: ['G3', 'B3', 'D4', 'G4'] },
+    { bass: 'D2', notes: ['A3', 'D4', 'F#4', 'A4'] },
+    { bass: 'E2', notes: ['E3', 'G3', 'B3', 'E4'] },
+    { bass: 'C3', notes: ['C3', 'E3', 'G3', 'C4'] },
+  ],
+  // 8분음표 8개. -1 은 베이스 줄
+  pattern: [-1, 2, 1, 3, 0, 2, 3, 1],
+};
+
+// 2번 — 긴장감 있고 신나는 EDM. 128 BPM, A단조 Am-F-C-G
+const EDM = {
+  bpm: 128,
+  vol: 0.055,
+  prog: [
+    { bass: 'A2', notes: ['A4', 'C5', 'E5', 'C5'] },
+    { bass: 'F2', notes: ['F4', 'A4', 'C5', 'A4'] },
+    { bass: 'C3', notes: ['C5', 'E5', 'G5', 'E5'] },
+    { bass: 'G2', notes: ['G4', 'B4', 'D5', 'B4'] },
+  ],
+};
+
+function bgmSpec() {
+  return state.bgmTrack === 2 ? EDM : FOLK;
+}
+function bgmBarSec() {
+  return (60 / bgmSpec().bpm) * 4;
+}
 const SEMI = { C: 0, 'C#': 1, D: 2, 'D#': 3, E: 4, F: 5, 'F#': 6, G: 7, 'G#': 8, A: 9, 'A#': 10, B: 11 };
 
 function noteHz(n) {
@@ -323,12 +344,13 @@ function bgmPad(f, t, dur) {
   o.stop(t + dur + 0.05);
 }
 
-function bgmScheduleBar(t, bar) {
-  const ch = BGM_PROG[bar % BGM_PROG.length];
-  bgmPad(noteHz(ch.bass) * 2, t, BGM_BAR);
+function folkBar(t, bar) {
+  const beat = 60 / FOLK.bpm;
+  const ch = FOLK.prog[bar % FOLK.prog.length];
+  bgmPad(noteHz(ch.bass) * 2, t, beat * 4);
   for (let i = 0; i < 8; i++) {
-    const at = t + i * (BGM_BEAT / 2);
-    const idx = BGM_PATTERN[i];
+    const at = t + i * (beat / 2);
+    const idx = FOLK.pattern[i];
     const isBass = idx < 0;
     const f = isBass ? noteHz(ch.bass) : noteHz(ch.notes[idx]);
     const accent = i === 0 ? 1 : i === 4 ? 0.85 : 0.66;
@@ -337,12 +359,138 @@ function bgmScheduleBar(t, bar) {
   }
 }
 
+/* ── EDM 악기들 (샘플 없이 오실레이터 + 생성한 잡음으로 만든다) ── */
+let _noiseBuf = null;
+function noiseBuffer() {
+  const ac = actx;
+  if (!_noiseBuf) {
+    const n = Math.floor(ac.sampleRate * 0.5);
+    const b = ac.createBuffer(1, n, ac.sampleRate);
+    const d = b.getChannelData(0);
+    for (let i = 0; i < n; i++) d[i] = Math.random() * 2 - 1;
+    _noiseBuf = b;
+  }
+  return _noiseBuf;
+}
+
+function edmKick(t) {
+  const ac = actx;
+  const o = ac.createOscillator();
+  o.type = 'sine';
+  o.frequency.setValueAtTime(165, t);
+  o.frequency.exponentialRampToValueAtTime(46, t + 0.1);
+  const g = ac.createGain();
+  g.gain.setValueAtTime(0, t);
+  g.gain.linearRampToValueAtTime(0.95, t + 0.004);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + 0.3);
+  o.connect(g);
+  g.connect(bgmGain);
+  o.start(t);
+  o.stop(t + 0.34);
+}
+
+function edmNoise(t, dur, type, hz, vol) {
+  const ac = actx;
+  const src = ac.createBufferSource();
+  src.buffer = noiseBuffer();
+  src.loop = true;
+  const f = ac.createBiquadFilter();
+  f.type = type;
+  f.frequency.value = hz;
+  const g = ac.createGain();
+  g.gain.setValueAtTime(0, t);
+  g.gain.linearRampToValueAtTime(vol, t + 0.003);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  src.connect(f);
+  f.connect(g);
+  g.connect(bgmGain);
+  src.start(t);
+  src.stop(t + dur + 0.03);
+}
+
+function edmBass(f, t, dur, vol) {
+  const ac = actx;
+  const o = ac.createOscillator();
+  o.type = 'sawtooth';
+  o.frequency.value = f;
+  const lp = ac.createBiquadFilter();
+  lp.type = 'lowpass';
+  lp.Q.value = 7;
+  lp.frequency.setValueAtTime(1100, t);
+  lp.frequency.exponentialRampToValueAtTime(240, t + dur);
+  const g = ac.createGain();
+  g.gain.setValueAtTime(0, t);
+  g.gain.linearRampToValueAtTime(vol, t + 0.008);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  o.connect(lp);
+  lp.connect(g);
+  g.connect(bgmGain);
+  o.start(t);
+  o.stop(t + dur + 0.03);
+}
+
+function edmLead(f, t, dur, vol) {
+  const ac = actx;
+  const o = ac.createOscillator();
+  o.type = 'sawtooth';
+  o.frequency.value = f;
+  const o2 = ac.createOscillator();
+  o2.type = 'square';
+  o2.frequency.value = f * 1.005; // 살짝 디튠해서 두툼하게
+  const lp = ac.createBiquadFilter();
+  lp.type = 'lowpass';
+  lp.Q.value = 3;
+  lp.frequency.setValueAtTime(5200, t);
+  lp.frequency.exponentialRampToValueAtTime(1400, t + dur);
+  const g = ac.createGain();
+  g.gain.setValueAtTime(0, t);
+  g.gain.linearRampToValueAtTime(vol, t + 0.006);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  const h = ac.createGain();
+  h.gain.value = 0.4;
+  o.connect(lp);
+  o2.connect(h);
+  h.connect(lp);
+  lp.connect(g);
+  g.connect(bgmGain);
+  o.start(t);
+  o2.start(t);
+  o.stop(t + dur + 0.03);
+  o2.stop(t + dur + 0.03);
+}
+
+function edmBar(t, bar) {
+  const beat = 60 / EDM.bpm;
+  const s16 = beat / 4;
+  const ch = EDM.prog[bar % EDM.prog.length];
+  const bass = noteHz(ch.bass);
+
+  for (let i = 0; i < 16; i++) {
+    const at = t + i * s16;
+    if (i % 4 === 0) edmKick(at);                                  // 네 박 모두 킥
+    if (i === 4 || i === 12) edmNoise(at, 0.17, 'bandpass', 1900, 0.3); // 박수
+    if (i % 4 === 2) edmNoise(at, i === 14 ? 0.19 : 0.045, 'highpass', 7200, 0.13); // 하이햇
+    if (i % 2 === 0) {
+      const up = i === 6 || i === 14 ? 2 : 1; // 중간중간 옥타브 점프로 굴러가게
+      edmBass(bass * up, at, s16 * 1.7, 0.36);
+    }
+    edmLead(noteHz(ch.notes[i % ch.notes.length]), at, s16 * 1.5, i % 4 === 0 ? 0.13 : 0.085);
+  }
+  // 마디 첫머리 코드 스탭
+  ch.notes.slice(0, 3).forEach((n) => edmLead(noteHz(n) / 2, t, beat * 0.85, 0.09));
+}
+
+function bgmScheduleBar(t, bar) {
+  if (state.bgmTrack === 2) edmBar(t, bar);
+  else folkBar(t, bar);
+}
+
 function bgmPump() {
   const ac = audioCtx();
   if (!ac || !bgmGain) return;
   while (bgmNext < ac.currentTime + 1.0) {
     bgmScheduleBar(bgmNext, bgmBar++);
-    bgmNext += BGM_BAR;
+    bgmNext += bgmBarSec();
   }
 }
 
@@ -352,10 +500,24 @@ function startBgm() {
   const ac = actx;
   if (ac.state === 'suspended') return; // 아직 사용자 조작 전 — 첫 조작 때 다시 부른다
   bus.gain.cancelScheduledValues(ac.currentTime);
-  bus.gain.setTargetAtTime(BGM_VOL, ac.currentTime, 0.4);
+  bus.gain.setTargetAtTime(bgmSpec().vol, ac.currentTime, 0.4);
   bgmNext = ac.currentTime + 0.12;
   bgmPump();
   bgmTimer = setInterval(bgmPump, 250);
+}
+
+/** 곡을 바꿀 때 — 즉시 끊고 새 곡을 처음부터 */
+function switchBgm() {
+  if (bgmTimer) {
+    clearInterval(bgmTimer);
+    bgmTimer = null;
+  }
+  if (bgmGain && actx) {
+    bgmGain.gain.cancelScheduledValues(actx.currentTime);
+    bgmGain.gain.setValueAtTime(0, actx.currentTime);
+  }
+  bgmBar = 0;
+  startBgm();
 }
 
 function stopBgm() {
@@ -373,7 +535,10 @@ function syncAudioButtons() {
   el.sfxBtn.classList.toggle('is-off', !state.sound);
   el.sfxBtn.innerHTML = (state.sound ? '&#128266;' : '&#128263;') + ' 효과음';
   el.bgmBtn.classList.toggle('is-off', !state.bgm);
-  el.bgmBtn.innerHTML = (state.bgm ? '&#127925;' : '&#128263;') + ' 배경음';
+  el.bgmBtn.innerHTML = state.bgm ? '&#127925; 배경음 ' + state.bgmTrack : '&#128263; 배경음';
+  el.bgmBtn.title = state.bgm
+    ? '배경음 ' + state.bgmTrack + (state.bgmTrack === 1 ? ' (어쿠스틱)' : ' (EDM)') + ' — 눌러서 전환'
+    : '배경음 꺼짐 — 눌러서 켜기';
 }
 
 /* ---------------- 획득 ---------------- */
@@ -399,17 +564,33 @@ function byText(by) {
   return '거위가 스스로';
 }
 
+/** 신화·전설은 뽑은 사람을 전부 남긴다(도감에 다 보여주기 위해).
+ *  아래 등급까지 전부 남기면 후원자가 수백 명이 되어 세이브가 비대해진다. */
+const WHO_LIST_FROM = 4; // legendary 이상
+
+function pushWho(rec, credit) {
+  if (!credit) return;
+  const key = credit.k === 'don' ? 'd:' + credit.n : credit.k;
+  if (!rec.who) rec.who = [];
+  const hit = rec.who.find((w) => w.key === key);
+  if (hit) hit.c += 1;
+  else rec.who.push({ key: key, k: credit.k, n: credit.n || '', c: 1 });
+}
+
 function addEgg(egg, credit) {
   const now = Date.now();
-  const rec = state.owned[egg.id];
+  let rec = state.owned[egg.id];
   const isNew = !rec;
-  if (isNew) state.owned[egg.id] = { c: 1, first: now, last: now, by: credit, lastBy: credit };
-  else {
+  if (isNew) {
+    rec = { c: 1, first: now, last: now, by: credit, lastBy: credit };
+    state.owned[egg.id] = rec;
+  } else {
     rec.c += 1;
     rec.last = now;
     rec.lastBy = credit;
     if (!rec.by) rec.by = credit; // 예전 세이브 보정
   }
+  if (tierIdx(egg.tier) >= WHO_LIST_FROM) pushWho(rec, credit);
   state.drops += 1;
   return isNew;
 }
@@ -805,6 +986,30 @@ function renderBag() {
   el.bagGrid.innerHTML = ids.map((id) => eggCell(EGG_BY_ID[id], state.owned[id].c, false, true)).join('');
 }
 
+/** 도감의 신화·전설 한 줄 — 그 알을 뽑은 사람 전원 */
+function dexHiRow(egg) {
+  const rec = state.owned[egg.id];
+  const t = tierOf(egg);
+  if (!rec) {
+    return (
+      '<div class="dex-row locked" style="--tc:' + t.color + '">' + eggSvg(egg) +
+      '<div class="dex-row-body"><div class="dex-row-name">???</div>' +
+      '<div class="who-none">아직 아무도 못 뽑았습니다</div></div></div>'
+    );
+  }
+  const list = (rec.who || []).slice().sort((a, b) => b.c - a.c);
+  const chips = list.length
+    ? list.map((w) => byTag({ k: w.k, n: w.n }).replace('</span>', (w.c > 1 ? ' &times;' + w.c : '') + '</span>')).join('')
+    : byTag(rec.by);
+  return (
+    '<div class="dex-row" style="--tc:' + t.color + '" data-egg="' + egg.id + '">' + eggSvg(egg) +
+    '<div class="dex-row-body">' +
+    '<div class="dex-row-name">' + esc(egg.name) + '<span class="q">' + nf(rec.c) + '개</span></div>' +
+    '<div class="who-list">' + chips + '</div>' +
+    '</div></div>'
+  );
+}
+
 function renderDex() {
   const owned = ownedIds().length;
   el.dexOwned.textContent = owned;
@@ -817,12 +1022,18 @@ function renderDex() {
     .map((t) => {
       const pool = EGGS_BY_TIER[t.key];
       const have = pool.filter((e) => state.owned[e.id]).length;
-      return (
+      const head =
         '<div class="dex-group" style="--tc:' + t.color + '">' +
         '<div class="dex-group-head"><span class="bar"></span>' +
         '<span style="color:' + t.color + '">' + t.name + '</span>' +
-        '<span class="n">' + have + ' / ' + pool.length + '</span></div>' +
-        '<div class="egg-grid">' +
+        '<span class="n">' + have + ' / ' + pool.length + '</span></div>';
+
+      // 신화·전설은 누가 뽑았는지 전부 보여준다
+      if (tierIdx(t.key) >= WHO_LIST_FROM) {
+        return head + '<div class="dex-hi">' + pool.map((e) => dexHiRow(e)).join('') + '</div></div>';
+      }
+      return (
+        head + '<div class="egg-grid">' +
         pool.map((e) => eggCell(e, state.owned[e.id] ? state.owned[e.id].c : 0, !state.owned[e.id])).join('') +
         '</div></div>'
       );
@@ -1051,10 +1262,18 @@ function init() {
     if (state.sound) sfxClick();
     save(true);
   });
+  // 눌러서 순환 : 1 어쿠스틱 → 2 EDM → 끄기
   el.bgmBtn.addEventListener('click', () => {
-    state.bgm = !state.bgm;
+    if (!state.bgm) {
+      state.bgm = true;
+      state.bgmTrack = 1;
+    } else if (state.bgmTrack !== 2) {
+      state.bgmTrack = 2;
+    } else {
+      state.bgm = false;
+    }
     syncAudioButtons();
-    if (state.bgm) startBgm();
+    if (state.bgm) switchBgm();
     else stopBgm();
     save(true);
   });
