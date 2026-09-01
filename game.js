@@ -50,7 +50,15 @@ const el = {
   donEmpty: $('donEmpty'),
   donCount: $('donCount'),
 
-  bannerSlot: $('bannerSlot'),
+  donNow: $('donNow'),
+  donNowAmt: $('donNowAmt'),
+  donNowWho: $('donNowWho'),
+  donNowGain: $('donNowGain'),
+  donNowBar: $('donNowBar'),
+  donIdle: $('donIdle'),
+  donWait: $('donWait'),
+  donWaitN: $('donWaitN'),
+
   dropStack: $('dropStack'),
   tierFlash: $('tierFlash'),
 
@@ -442,10 +450,14 @@ function feather(x, y) {
 }
 
 /* ---------------- 치지직 후원 → 자동 쓰다듬기 ----------------
- * 후원자별로 묶어서 대기시킨다. 그래야 그 쓰다듬기에서 나온 알에
- * "OO 님의 후원" 이름표를 정확히 붙일 수 있다. */
-let autoQueue = []; // [{ nick, left }]
-let autoLeft = 0;
+ * 표시 큐와 처리 큐를 하나로 합쳤다. 한 번에 한 건만 "지금" 칸에 띄우고,
+ * 그 건이 떠 있는 동안 딱 그 건의 쓰다듬기만 소진한다.
+ * → 화면의 후원 내역과 올라가는 숫자가 항상 같은 후원을 가리킨다.
+ * 후원자별로 묶여 있으니 그 쓰다듬기에서 나온 알에 이름표도 정확히 붙는다. */
+const DON_SHOW = 2600;     // 한 건을 보여주며 소진하는 기본 시간(ms)
+const DON_SHOW_MIN = 1100; // 많이 밀렸을 때까지 줄일 수 있는 최소 시간
+const donQueue = [];       // [{ nick, amount, gain }]
+let donActive = null;
 
 function clicksForAmount(amount) {
   return Math.floor(amount / DONATION_UNIT) * CLICKS_PER_1000;
@@ -464,53 +476,75 @@ function handleDonation(d) {
   state.don.clicks += gain;
   state.don.feed.unshift({ t: Date.now(), nick: d.nick, message: d.message, gained: gain > 0 });
 
-  if (gain > 0) {
-    autoQueue.push({ nick: d.nick, left: gain });
-    autoLeft += gain;
-    sfxDonation();
-    donationBanner(d, gain);
-  }
+  if (gain > 0) donQueue.push({ nick: d.nick, amount: d.amount, gain: gain });
   renderDonations();
   needRender = true; // '받은 후원' 타일도 같이 갱신
   save(true);
 }
 
-/* 도착 순간에만 금액을 보여주고 사라진다. 누적 금액은 어디에도 남기지 않는다.
- * 후원은 **하나도 빠뜨리지 않고 전부** 보여준다. 몰아칠 때는 합치지 않고 큐에 쌓아
- * 한 건씩 차례로 띄우며, 밀린 만큼 표시 시간을 줄여 밀림이 무한정 길어지지 않게 한다. */
-const BANNER_HOLD = 2600;      // 평소 한 건이 떠 있는 시간(ms)
-const BANNER_HOLD_MIN = 1100;  // 많이 밀렸을 때까지 줄일 수 있는 최소 시간
-const bannerQueue = [];
-let bannerBusy = false;
-
-function donationBanner(d, gain) {
-  bannerQueue.push({ amount: d.amount, nick: d.nick, gain: gain });
-  pumpBanner();
+/* 한 건을 "지금" 칸에 올리고, 그 건이 떠 있는 시간 동안 쓰다듬기를 나눠서 소진한다.
+ * 금액은 이 순간에만 보이고 누적 금액은 어디에도 남기지 않는다. */
+function startNextDonation() {
+  const d = donQueue.shift();
+  if (!d) return;
+  // 뒤에 밀린 게 많을수록 빠르게 넘긴다 (그래도 한 건도 건너뛰지 않는다)
+  const dur = Math.max(DON_SHOW_MIN, DON_SHOW - donQueue.length * 260);
+  donActive = { nick: d.nick, amount: d.amount, gain: d.gain, left: d.gain, acc: 0, dur: dur, t: 0 };
+  sfxDonation();
 }
 
-function pumpBanner() {
-  if (bannerBusy || bannerQueue.length === 0) return;
-  bannerBusy = true;
-  const q = bannerQueue.shift();
+function stepDonation(dt, now) {
+  if (!donActive) startNextDonation();
+  if (!donActive) {
+    renderNow();
+    return;
+  }
+  const a = donActive;
+  a.t += dt;
 
-  // 뒤에 밀린 게 많을수록 빠르게 넘긴다 (그래도 전부 다 보여준다)
-  const hold = Math.max(BANNER_HOLD_MIN, BANNER_HOLD - bannerQueue.length * 260);
+  a.acc += (a.gain * dt) / a.dur;
+  let n = Math.floor(a.acc);
+  if (n > a.left) n = a.left;
+  if (n > 0) {
+    a.acc -= n;
+    a.left -= n;
+    applyClicks(n, { k: 'don', n: a.nick });
+    clickLog.push([now, n]);
+  }
 
-  const b = document.createElement('div');
-  b.className = 'don-banner';
-  b.innerHTML =
-    '<span class="amt">' + nf(q.amount) + '원</span>' +
-    '<span class="who">' + esc(q.nick) + '</span>' +
-    '<span>&rarr; 쓰다듬기 ' + nf(q.gain) + '회!</span>' +
-    (bannerQueue.length ? '<span class="queued">+' + nf(bannerQueue.length) + ' 대기</span>' : '');
-  el.bannerSlot.appendChild(b);
+  if (a.t >= a.dur) {
+    if (a.left > 0) {
+      applyClicks(a.left, { k: 'don', n: a.nick });
+      clickLog.push([now, a.left]);
+      a.left = 0;
+    }
+    renderNow();
+    donActive = null;
+    needRender = true;
+    save(true);
+    return;
+  }
+  renderNow();
+}
 
-  setTimeout(() => {
-    b.classList.add('out');
-    setTimeout(() => b.remove(), 420);
-    bannerBusy = false;
-    pumpBanner();
-  }, hold);
+function renderNow() {
+  const a = donActive;
+  if (!a) {
+    el.donNow.hidden = true;
+    el.donIdle.hidden = false;
+    el.donWait.hidden = donQueue.length === 0;
+    if (donQueue.length) el.donWaitN.textContent = nf(donQueue.length);
+    return;
+  }
+  el.donIdle.hidden = true;
+  el.donNow.hidden = false;
+  el.donNowAmt.textContent = nf(a.amount) + '원';
+  el.donNowWho.textContent = a.nick;
+  const done = a.gain - a.left;
+  el.donNowGain.textContent = '쓰다듬기 ' + nf(done) + ' / ' + nf(a.gain) + '회';
+  el.donNowBar.style.width = (a.gain ? (done / a.gain) * 100 : 100) + '%';
+  el.donWait.hidden = donQueue.length === 0;
+  if (donQueue.length) el.donWaitN.textContent = nf(donQueue.length);
 }
 
 /* ---------------- 데모 후원 (게임 소개용) ----------------
@@ -809,31 +843,8 @@ function tick(now) {
   el.timerText.textContent = fmtClock(DROP_INTERVAL - state.progress);
   el.timerFill.style.width = (state.progress / DROP_INTERVAL) * 100 + '%';
 
-  // 후원 자동 쓰다듬기 소진 (많이 들어와도 6초 안에 다 처리)
-  if (autoLeft > 0) {
-    const rate = Math.max(20, Math.ceil(autoLeft / 6));
-    let n = Math.max(1, Math.min(autoLeft, Math.round((rate * dt) / 1000)));
-    const want = n;
-    while (n > 0 && autoQueue.length) {
-      const b = autoQueue[0];
-      const take = Math.min(n, b.left);
-      b.left -= take;
-      n -= take;
-      autoLeft -= take;
-      applyClicks(take, { k: 'don', n: b.nick }); // 이 쓰다듬기의 공로자
-      if (b.left <= 0) autoQueue.shift();
-    }
-    const spent = want - n;
-    if (spent > 0) clickLog.push([now, spent]);
-    if (Math.random() < 0.4) {
-      const r = el.fx.getBoundingClientRect();
-      popText('+' + spent, r.width * (0.3 + Math.random() * 0.4), r.height * (0.3 + Math.random() * 0.3));
-    }
-    if (autoLeft === 0) {
-      needRender = true;
-      save(true);
-    }
-  }
+  // 후원 처리 — "지금" 칸에 뜬 그 후원의 쓰다듬기만 소진한다 (화면과 숫자가 어긋나지 않게)
+  stepDonation(dt, now);
 
   // 초당 쓰다듬기
   const cut = now - 1000;
@@ -931,8 +942,9 @@ function init() {
     if (!confirm('모은 알과 기록이 모두 사라집니다. 정말 처음부터 다시 시작할까요?')) return;
     localStorage.removeItem(SAVE_KEY);
     state = freshState();
-    autoQueue = [];
-    autoLeft = 0;
+    donQueue.length = 0;
+    donActive = null;
+    renderNow();
     renderAll();
     save(true);
   });
