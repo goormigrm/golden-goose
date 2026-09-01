@@ -473,9 +473,17 @@ button,select,input{font:inherit;color:inherit}
 .tier-row{display:flex;align-items:center;gap:8px;font-size:12px}
 .tier-row .dot{width:8px;height:8px;border-radius:99px;background:var(--tc);box-shadow:0 0 8px var(--tc);flex:none}
 .tier-row .nm{width:40px;font-weight:700}
-.tier-row .track{flex:1;height:6px;border-radius:99px;background:rgba(255,255,255,.05);overflow:hidden}
-.tier-row .fill{height:100%;background:var(--tc);opacity:.85;border-radius:99px;transition:width .35s}
-.tier-row .num{width:46px;text-align:right;color:var(--muted);font-variant-numeric:tabular-nums}
+.tier-row .track{
+  flex:1;min-width:36px;height:7px;border-radius:99px;
+  background:rgba(255,255,255,.06);overflow:hidden;
+  display:block; /* 자식 .fill 이 인라인이면 width/height 가 먹지 않는다 */
+}
+.tier-row .fill{
+  display:block;height:100%;width:0;background:var(--tc);opacity:.9;
+  border-radius:99px;transition:width .35s ease;
+}
+.tier-row .num{width:42px;text-align:right;color:var(--muted);font-variant-numeric:tabular-nums}
+.tier-row .qty{width:46px;text-align:right;color:#8b7f6b;font-size:11px;font-variant-numeric:tabular-nums}
 .tier-row .num b{color:var(--tc);font-weight:900}
 .tier-row.done .fill{box-shadow:0 0 9px var(--tc);opacity:1}
 .tier-row.done .nm{text-shadow:0 0 10px var(--tc)}

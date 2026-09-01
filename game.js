@@ -727,7 +727,8 @@ function renderStats() {
         ' title="' + t.name + ' &middot; ' + have + ' / ' + pool.length + '종 &middot; 보유 ' + nf(cnt) + '개">' +
         '<span class="dot"></span><span class="nm" style="color:' + t.color + '">' + t.name + '</span>' +
         '<span class="track"><span class="fill" style="width:' + pct + '%"></span></span>' +
-        '<span class="num"><b>' + have + '</b> / ' + pool.length + '</span></div>'
+        '<span class="num"><b>' + have + '</b> / ' + pool.length + '</span>' +
+        '<span class="qty">' + nf(cnt) + '개</span></div>'
       );
     })
     .join('');
