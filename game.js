@@ -502,7 +502,15 @@ function bgmBus() {
   if (!bgmGain) {
     bgmGain = ac.createGain();
     bgmGain.gain.value = 0;
-    bgmGain.connect(ac.destination);
+    // 음이 여러 개 겹칠 때 피크가 튀어 깨지는 것을 막는 리미터
+    const comp = ac.createDynamicsCompressor();
+    comp.threshold.value = -14;
+    comp.knee.value = 12;
+    comp.ratio.value = 8;
+    comp.attack.value = 0.004;
+    comp.release.value = 0.2;
+    bgmGain.connect(comp);
+    comp.connect(ac.destination);
   }
   return bgmGain;
 }
@@ -528,6 +536,7 @@ function bgmPluck(f, t, dur, vel) {
   out.gain.setValueAtTime(0, t);
   out.gain.linearRampToValueAtTime(vel, t + 0.008);
   out.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  out.gain.linearRampToValueAtTime(0, t + dur + 0.03); // 0 까지 닫아야 딸깍 소리가 안 난다
 
   o1.connect(out);
   o2.connect(h);
@@ -536,8 +545,8 @@ function bgmPluck(f, t, dur, vel) {
   lp.connect(bgmGain);
   o1.start(t);
   o2.start(t);
-  o1.stop(t + dur + 0.05);
-  o2.stop(t + dur + 0.05);
+  o1.stop(t + dur + 0.06);
+  o2.stop(t + dur + 0.06);
 }
 
 /** 뒤에 얇게 깔리는 패드 */
@@ -550,11 +559,11 @@ function bgmPad(f, t, dur) {
   g.gain.setValueAtTime(0, t);
   g.gain.linearRampToValueAtTime(0.14, t + 0.7);
   g.gain.setValueAtTime(0.14, t + dur - 0.7);
-  g.gain.linearRampToValueAtTime(0.0001, t + dur);
+  g.gain.linearRampToValueAtTime(0, t + dur);
   o.connect(g);
   g.connect(bgmGain);
   o.start(t);
-  o.stop(t + dur + 0.05);
+  o.stop(t + dur + 0.04);
 }
 
 function folkBar(t, bar) {
@@ -596,10 +605,11 @@ function edmKick(t) {
   g.gain.setValueAtTime(0, t);
   g.gain.linearRampToValueAtTime(0.95, t + 0.004);
   g.gain.exponentialRampToValueAtTime(0.0001, t + 0.3);
+  g.gain.linearRampToValueAtTime(0, t + 0.33);
   o.connect(g);
   g.connect(bgmGain);
   o.start(t);
-  o.stop(t + 0.34);
+  o.stop(t + 0.36);
 }
 
 function edmNoise(t, dur, type, hz, vol) {
@@ -614,11 +624,12 @@ function edmNoise(t, dur, type, hz, vol) {
   g.gain.setValueAtTime(0, t);
   g.gain.linearRampToValueAtTime(vol, t + 0.003);
   g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  g.gain.linearRampToValueAtTime(0, t + dur + 0.02);
   src.connect(f);
   f.connect(g);
   g.connect(bgmGain);
   src.start(t);
-  src.stop(t + dur + 0.03);
+  src.stop(t + dur + 0.04);
 }
 
 function edmBass(f, t, dur, vol) {
@@ -635,11 +646,12 @@ function edmBass(f, t, dur, vol) {
   g.gain.setValueAtTime(0, t);
   g.gain.linearRampToValueAtTime(vol, t + 0.008);
   g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  g.gain.linearRampToValueAtTime(0, t + dur + 0.02);
   o.connect(lp);
   lp.connect(g);
   g.connect(bgmGain);
   o.start(t);
-  o.stop(t + dur + 0.03);
+  o.stop(t + dur + 0.04);
 }
 
 function edmLead(f, t, dur, vol) {
@@ -659,6 +671,7 @@ function edmLead(f, t, dur, vol) {
   g.gain.setValueAtTime(0, t);
   g.gain.linearRampToValueAtTime(vol, t + 0.006);
   g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  g.gain.linearRampToValueAtTime(0, t + dur + 0.02);
   const h = ac.createGain();
   h.gain.value = 0.4;
   o.connect(lp);
@@ -668,8 +681,8 @@ function edmLead(f, t, dur, vol) {
   g.connect(bgmGain);
   o.start(t);
   o2.start(t);
-  o.stop(t + dur + 0.03);
-  o2.stop(t + dur + 0.03);
+  o.stop(t + dur + 0.04);
+  o2.stop(t + dur + 0.04);
 }
 
 function edmBar(t, bar) {
@@ -698,10 +711,17 @@ function bgmScheduleBar(t, bar) {
   else folkBar(t, bar);
 }
 
+/* 선예약 구간. 탭이 가려지면 setInterval 이 1초에 한 번까지 느려지므로
+ * 그보다 넉넉히 잡아야 소리가 끊기지 않는다. */
+const BGM_LOOKAHEAD = 1.6;
+
 function bgmPump() {
   const ac = audioCtx();
   if (!ac || !bgmGain) return;
-  while (bgmNext < ac.currentTime + 1.0) {
+  // 지지직의 주범 — 예약 시각이 현재보다 뒤처지면 브라우저가 전부 '지금'으로 당겨 붙여
+  // 음이 한꺼번에 겹치면서 깨진다. 뒤처졌으면 따라잡지 말고 현재 시점으로 다시 맞춘다.
+  if (bgmNext < ac.currentTime + 0.05) bgmNext = ac.currentTime + 0.05;
+  while (bgmNext < ac.currentTime + BGM_LOOKAHEAD) {
     bgmScheduleBar(bgmNext, bgmBar++);
     bgmNext += bgmBarSec();
   }
