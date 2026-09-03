@@ -794,8 +794,10 @@ function feather(x, y) {
  * 그 건이 떠 있는 동안 딱 그 건의 쓰다듬기만 소진한다.
  * → 화면의 후원 내역과 올라가는 숫자가 항상 같은 후원을 가리킨다.
  * 후원자별로 묶여 있으니 그 쓰다듬기에서 나온 알에 이름표도 정확히 붙는다. */
-const DON_SHOW = 2600;     // 한 건을 보여주며 소진하는 기본 시간(ms)
-const DON_SHOW_MIN = 1100; // 많이 밀렸을 때까지 줄일 수 있는 최소 시간
+const DON_MIN_SHOW = 2600;      // 적은 금액이라도 최소 이만큼은 떠 있는다(ms)
+const DON_MIN_SHOW_BUSY = 1100; // 뒤가 밀렸을 때 줄일 수 있는 하한
+                                // ※ 줄이는 건 '다 처리하고 더 머무는 시간'뿐이다.
+                                //   쓰다듬는 속도(DONATION_CLICKS_PER_SEC)는 절대 건드리지 않는다.
 const donQueue = [];       // [{ nick, amount, gain }]
 let donActive = null;
 
@@ -827,9 +829,15 @@ function handleDonation(d) {
 function startNextDonation() {
   const d = donQueue.shift();
   if (!d) return;
-  // 뒤에 밀린 게 많을수록 빠르게 넘긴다 (그래도 한 건도 건너뛰지 않는다)
-  const dur = Math.max(DON_SHOW_MIN, DON_SHOW - donQueue.length * 260);
-  donActive = { nick: d.nick, amount: d.amount, msg: d.msg, gain: d.gain, left: d.gain, acc: 0, dur: dur, t: 0 };
+  // 쓰다듬는 데 실제로 걸리는 시간 — 금액에 정비례한다
+  const drain = (d.gain / DONATION_CLICKS_PER_SEC) * 1000;
+  // 다 쓰다듬은 뒤 더 머무는 시간. 뒤가 밀렸으면 이것만 줄인다(속도는 그대로)
+  const linger = Math.max(DON_MIN_SHOW_BUSY, DON_MIN_SHOW - donQueue.length * 260);
+  donActive = {
+    nick: d.nick, amount: d.amount, msg: d.msg,
+    gain: d.gain, left: d.gain, acc: 0,
+    dur: Math.max(linger, drain), t: 0,
+  };
   sfxDonation();
 }
 
@@ -842,7 +850,8 @@ function stepDonation(dt, now) {
   const a = donActive;
   a.t += dt;
 
-  a.acc += (a.gain * dt) / a.dur;
+  // 금액과 무관하게 항상 같은 속도로 쓰다듬는다
+  a.acc += (DONATION_CLICKS_PER_SEC * dt) / 1000;
   let n = Math.floor(a.acc);
   if (n > a.left) n = a.left;
   if (n > 0) {
