@@ -175,31 +175,38 @@ button,select,input{font:inherit;color:inherit}
 
 /* 지금 처리 중인 후원 — 막대가 차는 만큼 실제로 쓰다듬어진다 */
 .don-now{
-  flex:1;min-width:0;display:flex;align-items:center;gap:10px;
-  padding:7px 14px;border-radius:12px;
+  flex:1;min-width:0;display:flex;align-items:center;gap:11px;
+  padding:8px 15px;border-radius:12px;
   background:linear-gradient(100deg,rgba(0,214,66,.96),rgba(0,158,48,.96));
-  color:#04240f;font-weight:900;font-size:14px;
+  color:#04240f;font-weight:900;font-size:15.5px;
   box-shadow:0 6px 22px -8px rgba(0,224,74,.75);
   animation:nowIn .3s cubic-bezier(.2,1.35,.4,1);
 }
 .don-now[hidden]{display:none}
 @keyframes nowIn{from{opacity:0;transform:translateY(-8px) scale(.97)}to{opacity:1;transform:none}}
-.don-now .now-tag{
-  background:rgba(4,36,15,.3);border-radius:6px;padding:2px 7px;
-  font-size:10.5px;letter-spacing:.08em;flex:none;
-}
+
+/* 금액 — 흰 알약으로 확실히 떼어 놓는다 */
 .don-now .amt{
-  background:rgba(255,255,255,.94);border-radius:7px;padding:2px 9px;
-  font-variant-numeric:tabular-nums;white-space:nowrap;flex:none;
+  background:#fff;border-radius:8px;padding:3px 11px;flex:none;
+  font-size:17px;font-weight:900;font-variant-numeric:tabular-nums;white-space:nowrap;
+  box-shadow:0 1px 0 rgba(0,0,0,.12);
 }
-.don-now .who{max-width:12em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:none}
+/* 닉네임 — 세로선으로 구분 */
+.don-now .who{
+  flex:none;max-width:12em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  font-size:16px;font-weight:900;letter-spacing:-.01em;
+  padding-left:12px;border-left:2px solid rgba(4,36,15,.28);
+}
+/* 후원 내용 — 한 톤 낮춰서 닉네임과 섞이지 않게 */
 .don-now .msg{
   flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
-  font-weight:700;color:rgba(4,36,15,.78);
+  font-size:14.5px;font-weight:700;color:rgba(4,36,15,.72);
+  padding-left:12px;border-left:2px solid rgba(4,36,15,.28);
 }
+.don-now .msg:empty{display:none}
 .don-now .gain{
   flex:none;margin-left:auto;white-space:nowrap;font-variant-numeric:tabular-nums;
-  background:rgba(4,36,15,.22);border-radius:8px;padding:3px 10px;
+  font-size:14px;background:rgba(4,36,15,.22);border-radius:8px;padding:4px 11px;
 }
 
 .don-idle{
@@ -253,11 +260,13 @@ button,select,input{font:inherit;color:inherit}
 .dr-text i{font-style:normal;margin:0 8px;color:rgba(216,247,226,.5);font-weight:600}
 
 .donband-feed{
-  flex:1;min-width:0;display:flex;gap:8px;overflow-x:auto;padding:2px 0;
-  scrollbar-width:none;-ms-overflow-style:none;
-  mask-image:linear-gradient(90deg,transparent 0,#000 14px,#000 calc(100% - 26px),transparent 100%);
+  flex:1;min-width:0;display:flex;flex-wrap:nowrap;gap:8px;padding:2px 0;
+  overflow:hidden; /* 줄바꿈·가로스크롤 없이 넘치는 만큼 잘라낸다 */
+  /* auto 마진 : 자리가 남으면 가운데 정렬, 넘치면 0 이 되어 최신 칩부터 왼쪽에 남는다 */
+  mask-image:linear-gradient(90deg,#000 0,#000 calc(100% - 44px),transparent 100%);
 }
-.donband-feed::-webkit-scrollbar{display:none}
+.donband-feed > :first-child{margin-left:auto}
+.donband-feed > :last-child{margin-right:auto}
 .donband-feed:empty{display:none}
 .don-chip{
   display:inline-flex;align-items:center;gap:9px;flex:none;max-width:340px;
@@ -272,7 +281,7 @@ button,select,input{font:inherit;color:inherit}
 @keyframes chipIn{from{opacity:0;transform:translateX(-14px) scale(.9)}to{opacity:1;transform:none}}
 
 .donband-empty{
-  flex:1;min-width:0;margin:0;font-size:13.5px;color:rgba(200,216,205,.55);
+  flex:1;min-width:0;margin:0;font-size:13.5px;color:rgba(200,216,205,.55);text-align:center;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
 }
 .donband-empty[hidden]{display:none}

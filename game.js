@@ -2,7 +2,8 @@
  * GOLDEN GOOSE 24K — 게임 로직
  *   · 거위를 쓰다듬으면 카운터가 오르고, 가끔 그 자리에서 알을 낳는다
  *   · 3분마다 알을 하나 낳는다 (창을 닫아둔 동안도 누적)
- *   · 치지직 후원 1,000원 = 쓰다듬기 10회 (config.js 에서 조정)
+ *   · 치지직 후원 1,000 치즈 = 쓰다듬기 10회 (config.js 에서 조정)
+ *     ※ 치지직 후원 단위는 '원'이 아니라 '치즈'다. 화면 표기는 전부 치즈로 맞춘다.
  *
  * UI 원칙
  *   1. 알 획득은 **절대 클릭을 막지 않는다.** 모달 없이 알림 카드만 띄우고 스스로 사라진다.
@@ -15,7 +16,7 @@
 const SAVE_KEY = 'gg:save-v1';
 
 /** 후원 밴드에 띄우는 최근 후원 칩 개수 (표시용 창일 뿐, 기록은 전부 보관한다) */
-const DON_TICKER_VISIBLE = 30;
+const DON_TICKER_VISIBLE = 15;
 /** 화면에 동시에 떠 있는 획득 알림 카드 수 */
 const DROP_CARDS_VISIBLE = 4;
 
@@ -877,7 +878,7 @@ function renderNow() {
   }
   el.donIdle.hidden = true;
   el.donNow.hidden = false;
-  el.donNowAmt.textContent = nf(a.amount) + '원';
+  el.donNowAmt.textContent = nf(a.amount) + ' 치즈';
   el.donNowWho.textContent = a.nick;
   el.donNowMsg.textContent = a.msg || '';
   const done = a.gain - a.left;
@@ -1100,7 +1101,7 @@ function renderRates() {
     .join('');
 }
 
-/** 후원 밴드 — 닉네임과 메시지만. 금액은 도착 순간의 배너에만 잠깐 뜬다. */
+/** 후원 밴드 — 닉네임과 메시지만. 치즈 액수는 도착 순간의 현재 줄에만 잠깐 뜬다. */
 function renderDonations() {
   const f = state.don.feed;
   el.donCount.textContent = nf(state.don.count);
