@@ -362,56 +362,89 @@ const HZ = {
   C6: 1046.5, E6: 1318.51, G6: 1567.98, C7: 2093.0,
 };
 
+/** 단계별 팡파레 길이(ms). 이 시간 동안 배경음을 죽인다. */
+const FAN_DUR = [0, 2000, 2750, 3550, 4350, 5650];
+
 function sfxFanfare(level) {
-  if (!state.sound || level <= 0) return;
-  if (!fanBus()) return;
+  if (!state.sound || level <= 0) return 0;
+  if (!fanBus()) return 0;
   const H = HZ;
 
   if (level === 1) {
-    fanBell(H.C5, 0, 0.5, 0.16);
-    fanBell(H.E5, 0.09, 0.5, 0.16);
-    fanBell(H.G5, 0.18, 0.8, 0.18);
-    return;
-  }
-
-  if (level === 2) {
-    [H.C5, H.E5, H.G5].forEach((f, i) => fanBrass(f, i * 0.1, 0.22, 0.13));
-    fanBrass(H.C6, 0.3, 0.7, 0.17);
-    fanBell(H.C6, 0.3, 0.9, 0.13);
-    fanBrass(H.C4, 0, 0.8, 0.1);
-    return;
-  }
-
-  if (level === 3) {
+    // 종소리 3음 상행 + 옥타브 마무리
+    fanBell(H.C5, 0, 0.6, 0.16);
+    fanBell(H.E5, 0.1, 0.6, 0.16);
+    fanBell(H.G5, 0.2, 0.7, 0.17);
+    fanBell(H.C6, 0.34, 1.5, 0.19);
+    fanBell(H.G5, 0.34, 1.2, 0.1);
+    fanBrass(H.C4, 0.34, 1.3, 0.07);
+  } else if (level === 2) {
+    // 상행 → 응답구 → 마무리 화음
+    [H.C5, H.E5, H.G5].forEach((f, i) => fanBrass(f, i * 0.11, 0.24, 0.13));
+    fanBrass(H.C6, 0.34, 0.45, 0.16);
+    fanBrass(H.B5, 0.62, 0.2, 0.12);
+    fanBrass(H.A5, 0.74, 0.2, 0.12);
+    fanBrass(H.G5, 0.86, 0.5, 0.14);
+    [H.C5, H.E5, H.G5, H.C6].forEach((f) => fanBrass(f, 1.16, 1.4, 0.1));
+    fanBell(H.C6, 1.16, 1.5, 0.14);
+    fanBrass(H.C4, 0, 1.0, 0.09);
+    fanBrass(H.C4, 1.16, 1.5, 0.1);
+  } else if (level === 3) {
+    // 팡파레 동기 2번 + 상행 + 마무리
     fanBoom(0, 0.5);
-    [H.G4, H.C5, H.E5].forEach((f, i) => fanBrass(f, i * 0.14, 0.17, 0.14));
-    [H.C5, H.E5, H.G5, H.C6].forEach((f) => fanBrass(f, 0.42, 0.85, 0.1));
-    fanBell(H.C6, 0.42, 1.1, 0.13);
-    return;
-  }
-
-  if (level === 4) {
+    fanBrass(H.G4, 0, 0.16, 0.14);
+    fanBrass(H.C5, 0.14, 0.16, 0.14);
+    fanBrass(H.E5, 0.28, 0.34, 0.15);
+    fanBoom(0.62, 0.45);
+    fanBrass(H.C5, 0.62, 0.16, 0.14);
+    fanBrass(H.E5, 0.76, 0.16, 0.14);
+    fanBrass(H.G5, 0.9, 0.34, 0.15);
+    fanBrass(H.A5, 1.26, 0.16, 0.13);
+    fanBrass(H.B5, 1.38, 0.16, 0.13);
+    fanBrass(H.C6, 1.5, 0.5, 0.16);
+    fanBoom(1.88, 0.6);
+    [H.C5, H.E5, H.G5, H.C6, H.E6].forEach((f) => fanBrass(f, 1.88, 1.6, 0.095));
+    fanBell(H.C6, 1.88, 1.65, 0.14);
+    fanBell(H.E6, 1.98, 1.45, 0.1);
+  } else if (level === 4) {
+    // 러시 → 응답 → 두 번째 러시 → 대미
     fanBoom(0, 0.55);
+    fanCrash(0, 0.5, 0.1);
     [H.C5, H.D5, H.E5, H.F5, H.G5, H.A5, H.B5, H.C6].forEach((f, i) =>
-      fanBrass(f, i * 0.055, 0.15, 0.11)
+      fanBrass(f, i * 0.06, 0.16, 0.11)
     );
-    [H.C5, H.E5, H.G5, H.C6, H.E6].forEach((f) => fanBrass(f, 0.45, 0.95, 0.095));
-    fanCrash(0.45, 0.75, 0.13);
-    fanBell(H.C6, 0.45, 1.15, 0.13);
-    fanBell(H.E6, 0.52, 1.05, 0.1);
-    fanBoom(0.45, 0.6);
-    return;
+    fanBrass(H.C6, 0.5, 0.5, 0.16);
+    [H.G5, H.A5, H.B5].forEach((f, i) => fanBrass(f, 0.86 + i * 0.12, 0.18, 0.12));
+    fanBrass(H.C6, 1.22, 0.5, 0.15);
+    [H.E6, H.G6, H.C7].forEach((f, i) => fanBrass(f, 1.6 + i * 0.09, 0.22, 0.1));
+    fanBoom(1.95, 0.65);
+    fanCrash(1.95, 1.05, 0.14);
+    [H.C5, H.E5, H.G5, H.C6, H.E6, H.G6].forEach((f) => fanBrass(f, 1.95, 2.0, 0.085));
+    fanBell(H.C6, 1.95, 2.1, 0.14);
+    [H.C6, H.E6, H.G6, H.C7].forEach((f, i) => fanBell(f, 2.2 + i * 0.11, 1.2, 0.09));
+  } else {
+    // 5단계 — 5만 치즈 이상. 서주부터 여운까지
+    [0, 0.12, 0.22, 0.3, 0.36, 0.41, 0.45].forEach((d, i) => fanBoom(d, 0.25 + i * 0.07));
+    fanCrash(0.45, 0.85, 0.13);
+    [H.G4, H.C5, H.E5].forEach((f, i) => fanBrass(f, 0.5 + i * 0.14, 0.18, 0.14));
+    fanBrass(H.G5, 0.92, 0.5, 0.16);
+    [H.F5, H.E5, H.D5].forEach((f, i) => fanBrass(f, 1.3 + i * 0.12, 0.18, 0.13));
+    fanBrass(H.C5, 1.66, 0.45, 0.15);
+    [H.E5, H.G5, H.A5, H.B5, H.C6, H.E6].forEach((f, i) =>
+      fanBrass(f, 2.05 + i * 0.085, 0.2, 0.12)
+    );
+    fanBoom(2.6, 0.8);
+    fanCrash(2.6, 1.35, 0.16);
+    [H.C5, H.E5, H.G5, H.C6, H.E6, H.G6].forEach((f) => fanBrass(f, 2.6, 2.5, 0.085));
+    fanBell(H.C6, 2.6, 2.5, 0.15);
+    [H.C6, H.E6, H.G6, H.C7, H.G6, H.C7].forEach((f, i) =>
+      fanBell(f, 2.95 + i * 0.13, 1.2, 0.09)
+    );
+    fanBoom(4.3, 0.5);
+    fanBell(H.C7, 4.35, 1.25, 0.08);
   }
 
-  // 5단계 — 5만 치즈 이상 전부 여기
-  fanBoom(0, 0.75);
-  fanCrash(0, 0.9, 0.14);
-  [H.G4, H.C5, H.E5].forEach((f, i) => fanBrass(f, i * 0.13, 0.16, 0.14));
-  [H.G5, H.A5, H.B5, H.C6].forEach((f, i) => fanBrass(f, 0.39 + i * 0.06, 0.17, 0.13));
-  [H.C5, H.E5, H.G5, H.C6, H.E6, H.G6].forEach((f) => fanBrass(f, 0.64, 1.4, 0.085));
-  fanCrash(0.64, 1.15, 0.16);
-  fanBoom(0.64, 0.8);
-  [H.C6, H.E6, H.G6, H.C7].forEach((f, i) => fanBell(f, 0.78 + i * 0.09, 0.95, 0.1));
+  return FAN_DUR[level] || 0;
 }
 
 /* ---------------- 배경음 ----------------
@@ -688,6 +721,8 @@ function startBgm() {
 
 /** 곡을 바꿀 때 — 즉시 끊고 새 곡을 처음부터 */
 function switchBgm() {
+  clearTimeout(bgmDuckTimer);
+  bgmDuckTimer = null;
   if (bgmTimer) {
     clearInterval(bgmTimer);
     bgmTimer = null;
@@ -700,7 +735,35 @@ function switchBgm() {
   startBgm();
 }
 
+/** 팡파레가 울리는 동안 배경음을 죽였다가 되살린다.
+ *  이미 예약된 음은 음소거된 버스로 흘러가고, 스케줄러는 멈춰 뒀다가 지금 시점부터 다시 시작한다. */
+let bgmDuckTimer = null;
+
+function duckBgm(ms) {
+  if (!ms || !state.bgm) return;
+  const ac = audioCtx();
+  if (!ac || !bgmGain) return;
+  bgmGain.gain.cancelScheduledValues(ac.currentTime);
+  bgmGain.gain.setTargetAtTime(0, ac.currentTime, 0.05);
+  if (bgmTimer) {
+    clearInterval(bgmTimer);
+    bgmTimer = null;
+  }
+  clearTimeout(bgmDuckTimer);
+  bgmDuckTimer = setTimeout(() => {
+    bgmDuckTimer = null;
+    if (!state.bgm || !bgmGain || !actx) return;
+    bgmNext = actx.currentTime + 0.05; // 죽어 있던 동안의 마디는 건너뛴다
+    bgmGain.gain.cancelScheduledValues(actx.currentTime);
+    bgmGain.gain.setTargetAtTime(bgmSpec().vol, actx.currentTime, 0.4);
+    bgmPump();
+    if (!bgmTimer) bgmTimer = setInterval(bgmPump, 250);
+  }, ms);
+}
+
 function stopBgm() {
+  clearTimeout(bgmDuckTimer);
+  bgmDuckTimer = null;
   if (bgmTimer) {
     clearInterval(bgmTimer);
     bgmTimer = null;
@@ -1012,9 +1075,9 @@ function startNextDonation() {
     gain: d.gain, left: d.gain, acc: 0,
     dur: Math.max(linger, drain), t: 0,
   };
-  // 1만 치즈부터는 금액에 맞는 팡파레가 울린다
+  // 1만 치즈부터는 금액에 맞는 팡파레가 울린다. 그동안 배경음은 멈춘다.
   const lv = fanfareLevel(d.amount);
-  if (lv > 0) sfxFanfare(lv);
+  if (lv > 0) duckBgm(sfxFanfare(lv) + 300);
   else sfxDonation();
 }
 
