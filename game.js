@@ -240,6 +240,180 @@ function sfxDonation() {
   [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => tone(f, i * 0.07, 0.3, 'square', 0.09));
 }
 
+
+/* ---------------- 후원 팡파레 ----------------
+ * 1만 치즈마다 한 단계씩 화려해지고, 5만 이상은 5단계로 고정한다.
+ * 효과음과 마찬가지로 음원 파일 없이 전부 직접 합성한다.
+ *   1단계(1만)  종소리 3음 상행
+ *   2단계(2만)  금관 4음 상행 + 저음 받침
+ *   3단계(3만)  짧-짧-긴 팡파레 + 화음 + 팀파니
+ *   4단계(4만)  8음 상행 러시 + 심벌 + 도착 화음
+ *   5단계(5만+) 팀파니·심벌·금관·대화음·반짝임 전부 */
+const FAN_STEP = 10000; // 치즈
+const FAN_MAX = 5;
+
+function fanfareLevel(cheese) {
+  if (cheese < FAN_STEP) return 0;
+  return Math.min(FAN_MAX, Math.floor(cheese / FAN_STEP));
+}
+
+let fanGain = null;
+function fanBus() {
+  const ac = audioCtx();
+  if (!ac) return null;
+  if (!fanGain) {
+    fanGain = ac.createGain();
+    fanGain.gain.value = 0.5; // 여러 음이 겹치므로 마스터에서 한 번 잡아 준다
+    fanGain.connect(ac.destination);
+  }
+  return fanGain;
+}
+
+/** 금관 — 톱니파에 로우패스를 걸어 나팔 느낌 */
+function fanBrass(f, at, dur, vol) {
+  const ac = actx;
+  const t = ac.currentTime + at;
+  const o = ac.createOscillator();
+  o.type = 'sawtooth';
+  o.frequency.setValueAtTime(f * 0.992, t);
+  o.frequency.linearRampToValueAtTime(f, t + 0.05);
+  const lp = ac.createBiquadFilter();
+  lp.type = 'lowpass';
+  lp.Q.value = 1.2;
+  lp.frequency.setValueAtTime(1200, t);
+  lp.frequency.exponentialRampToValueAtTime(4200, t + 0.06);
+  lp.frequency.exponentialRampToValueAtTime(1400, t + dur);
+  const g = ac.createGain();
+  g.gain.setValueAtTime(0, t);
+  g.gain.linearRampToValueAtTime(vol, t + 0.03);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  o.connect(lp);
+  lp.connect(g);
+  g.connect(fanGain);
+  o.start(t);
+  o.stop(t + dur + 0.05);
+}
+
+/** 종 — 사인 + 배음 */
+function fanBell(f, at, dur, vol) {
+  const ac = actx;
+  const t = ac.currentTime + at;
+  const g = ac.createGain();
+  g.gain.setValueAtTime(0, t);
+  g.gain.linearRampToValueAtTime(vol, t + 0.008);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  [[1, 1], [2.76, 0.3], [5.4, 0.12]].forEach(([m, a]) => {
+    const o = ac.createOscillator();
+    o.type = 'sine';
+    o.frequency.value = f * m;
+    const h = ac.createGain();
+    h.gain.value = a;
+    o.connect(h);
+    h.connect(g);
+    o.start(t);
+    o.stop(t + dur + 0.05);
+  });
+  g.connect(fanGain);
+}
+
+/** 심벌 — 생성한 잡음을 하이패스에 통과 */
+function fanCrash(at, dur, vol) {
+  const ac = actx;
+  const t = ac.currentTime + at;
+  const src = ac.createBufferSource();
+  src.buffer = noiseBuffer();
+  src.loop = true;
+  const hp = ac.createBiquadFilter();
+  hp.type = 'highpass';
+  hp.frequency.setValueAtTime(3000, t);
+  hp.frequency.exponentialRampToValueAtTime(9000, t + dur);
+  const g = ac.createGain();
+  g.gain.setValueAtTime(0, t);
+  g.gain.linearRampToValueAtTime(vol, t + 0.006);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  src.connect(hp);
+  hp.connect(g);
+  g.connect(fanGain);
+  src.start(t);
+  src.stop(t + dur + 0.05);
+}
+
+/** 팀파니 — 저음이 뚝 떨어진다 */
+function fanBoom(at, vol) {
+  const ac = actx;
+  const t = ac.currentTime + at;
+  const o = ac.createOscillator();
+  o.type = 'sine';
+  o.frequency.setValueAtTime(140, t);
+  o.frequency.exponentialRampToValueAtTime(48, t + 0.22);
+  const g = ac.createGain();
+  g.gain.setValueAtTime(0, t);
+  g.gain.linearRampToValueAtTime(vol, t + 0.006);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + 0.55);
+  o.connect(g);
+  g.connect(fanGain);
+  o.start(t);
+  o.stop(t + 0.6);
+}
+
+const HZ = {
+  C4: 261.63, E4: 329.63, G4: 392.0,
+  C5: 523.25, D5: 587.33, E5: 659.25, F5: 698.46, G5: 783.99, A5: 880.0, B5: 987.77,
+  C6: 1046.5, E6: 1318.51, G6: 1567.98, C7: 2093.0,
+};
+
+function sfxFanfare(level) {
+  if (!state.sound || level <= 0) return;
+  if (!fanBus()) return;
+  const H = HZ;
+
+  if (level === 1) {
+    fanBell(H.C5, 0, 0.5, 0.16);
+    fanBell(H.E5, 0.09, 0.5, 0.16);
+    fanBell(H.G5, 0.18, 0.8, 0.18);
+    return;
+  }
+
+  if (level === 2) {
+    [H.C5, H.E5, H.G5].forEach((f, i) => fanBrass(f, i * 0.1, 0.22, 0.13));
+    fanBrass(H.C6, 0.3, 0.7, 0.17);
+    fanBell(H.C6, 0.3, 0.9, 0.13);
+    fanBrass(H.C4, 0, 0.8, 0.1);
+    return;
+  }
+
+  if (level === 3) {
+    fanBoom(0, 0.5);
+    [H.G4, H.C5, H.E5].forEach((f, i) => fanBrass(f, i * 0.14, 0.17, 0.14));
+    [H.C5, H.E5, H.G5, H.C6].forEach((f) => fanBrass(f, 0.42, 0.85, 0.1));
+    fanBell(H.C6, 0.42, 1.1, 0.13);
+    return;
+  }
+
+  if (level === 4) {
+    fanBoom(0, 0.55);
+    [H.C5, H.D5, H.E5, H.F5, H.G5, H.A5, H.B5, H.C6].forEach((f, i) =>
+      fanBrass(f, i * 0.055, 0.15, 0.11)
+    );
+    [H.C5, H.E5, H.G5, H.C6, H.E6].forEach((f) => fanBrass(f, 0.45, 0.95, 0.095));
+    fanCrash(0.45, 0.75, 0.13);
+    fanBell(H.C6, 0.45, 1.15, 0.13);
+    fanBell(H.E6, 0.52, 1.05, 0.1);
+    fanBoom(0.45, 0.6);
+    return;
+  }
+
+  // 5단계 — 5만 치즈 이상 전부 여기
+  fanBoom(0, 0.75);
+  fanCrash(0, 0.9, 0.14);
+  [H.G4, H.C5, H.E5].forEach((f, i) => fanBrass(f, i * 0.13, 0.16, 0.14));
+  [H.G5, H.A5, H.B5, H.C6].forEach((f, i) => fanBrass(f, 0.39 + i * 0.06, 0.17, 0.13));
+  [H.C5, H.E5, H.G5, H.C6, H.E6, H.G6].forEach((f) => fanBrass(f, 0.64, 1.4, 0.085));
+  fanCrash(0.64, 1.15, 0.16);
+  fanBoom(0.64, 0.8);
+  [H.C6, H.E6, H.G6, H.C7].forEach((f, i) => fanBell(f, 0.78 + i * 0.09, 0.95, 0.1));
+}
+
 /* ---------------- 배경음 ----------------
  * 음원 파일을 쓰지 않고 WebAudio 로 직접 합성한다 — 저작권 문제가 원천적으로 없고,
  * 파일도 받지 않으니 저장소가 가벼우며 오프라인에서도 그대로 돈다.
@@ -838,7 +1012,10 @@ function startNextDonation() {
     gain: d.gain, left: d.gain, acc: 0,
     dur: Math.max(linger, drain), t: 0,
   };
-  sfxDonation();
+  // 1만 치즈부터는 금액에 맞는 팡파레가 울린다
+  const lv = fanfareLevel(d.amount);
+  if (lv > 0) sfxFanfare(lv);
+  else sfxDonation();
 }
 
 function stepDonation(dt, now) {
