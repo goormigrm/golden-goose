@@ -58,6 +58,8 @@ const el = {
   donIdle: $('donIdle'),
   donWait: $('donWait'),
   donWaitN: $('donWaitN'),
+  hofClick: $('hofClick'),
+  hofGold: $('hofGold'),
 
   dropStack: $('dropStack'),
   tierFlash: $('tierFlash'),
@@ -94,6 +96,8 @@ function freshState() {
     bgmTrack: 1,  // 1 어쿠스틱 · 2 EDM
     // sum / clicks 는 내부 기록용. 화면에는 띄우지 않는다.
     don: { count: 0, sum: 0, clicks: 0, feed: [], seen: [] },
+    // 명예의 전당용 후원자별 누적. 화면에는 1위 닉네임만 띄운다.
+    hof: { clicks: {}, gold: {} },
   };
 }
 
@@ -106,6 +110,7 @@ function load() {
     const s = JSON.parse(raw);
     state = Object.assign(freshState(), s);
     state.don = Object.assign({ count: 0, sum: 0, clicks: 0, feed: [], seen: [] }, s.don || {});
+    state.hof = Object.assign({ clicks: {}, gold: {} }, s.hof || {});
     Object.keys(state.owned).forEach((id) => {
       if (!EGG_BY_ID[id]) delete state.owned[id]; // 데이터 개편으로 사라진 알 정리
     });
@@ -591,6 +596,9 @@ function addEgg(egg, credit) {
     if (!rec.by) rec.by = credit; // 예전 세이브 보정
   }
   if (tierIdx(egg.tier) >= WHO_LIST_FROM) pushWho(rec, credit);
+  if (egg.k24 && credit && credit.k === 'don') {
+    state.hof.gold[credit.n] = (state.hof.gold[credit.n] || 0) + egg.gram;
+  }
   state.drops += 1;
   return isNew;
 }
@@ -706,6 +714,9 @@ let clickLog = []; // [시각, 횟수]
 
 function applyClicks(n, credit) {
   state.clicks += n;
+  if (credit && credit.k === 'don') {
+    state.hof.clicks[credit.n] = (state.hof.clicks[credit.n] || 0) + n;
+  }
   let drops = 0;
   for (let i = 0; i < n; i++) if (Math.random() < CLICK_DROP_CHANCE) drops++;
   el.clickCount.textContent = nf(state.clicks);
@@ -1107,6 +1118,26 @@ function renderDonations() {
     .join('');
 }
 
+/** 명예의 전당 — 1위 닉네임만 보여준다.
+ *  횟수나 g 을 같이 적으면 그 사람의 후원 금액이 그대로 역산되므로 숫자는 넣지 않는다. */
+function topOf(map) {
+  let best = null;
+  let bestV = 0;
+  for (const k in map) {
+    if (map[k] > bestV) {
+      bestV = map[k];
+      best = k;
+    }
+  }
+  return best;
+}
+
+function renderHof() {
+  if (!el.hofClick) return;
+  el.hofClick.textContent = topOf(state.hof.clicks) || '—';
+  el.hofGold.textContent = topOf(state.hof.gold) || '—';
+}
+
 function renderGold() {
   el.goldGram.textContent = fmtGram(totalGold());
 }
@@ -1118,6 +1149,7 @@ function renderAll() {
   renderDex();
   renderStats();
   renderDonations();
+  renderHof();
 }
 
 /* ---------------- 루프 ---------------- */
@@ -1159,6 +1191,7 @@ function tick(now) {
     renderBag();
     renderDex();
     renderStats();
+    renderHof();
   }
 
   // '함께한 시간'만 주기적으로 갱신
@@ -1283,6 +1316,7 @@ function init() {
     if (!confirm('모은 알과 기록이 모두 사라집니다. 정말 처음부터 다시 시작할까요?')) return;
     localStorage.removeItem(SAVE_KEY);
     state = freshState();
+    renderHof();
     donQueue.length = 0;
     donActive = null;
     renderNow();
