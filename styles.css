@@ -174,39 +174,49 @@ button,select,input{font:inherit;color:inherit}
 .donband-rule{display:flex;align-items:center;gap:10px;flex:none}
 
 /* 지금 처리 중인 후원 — 막대가 차는 만큼 실제로 쓰다듬어진다 */
+/* 현재 처리 중인 후원 — 가운데 정렬, 요소마다 자기 칸을 갖는다.
+   밴드 자체가 초록이라 카드는 어둡게 깔고 초록 테두리로 띄운다(눈이 덜 피로하다). */
 .don-now{
-  flex:1;min-width:0;display:flex;align-items:center;gap:11px;
-  padding:8px 15px;border-radius:12px;
-  background:linear-gradient(100deg,rgba(0,214,66,.96),rgba(0,158,48,.96));
-  color:#04240f;font-weight:900;font-size:15.5px;
-  box-shadow:0 6px 22px -8px rgba(0,224,74,.75);
+  flex:1;min-width:0;display:flex;align-items:center;justify-content:center;gap:9px;
+  padding:7px 14px;border-radius:13px;
+  background:linear-gradient(100deg,rgba(8,32,18,.94),rgba(4,18,10,.94));
+  border:1px solid rgba(0,224,74,.42);
+  box-shadow:0 10px 28px -14px rgba(0,224,74,.6), inset 0 1px 0 rgba(255,255,255,.05);
   animation:nowIn .3s cubic-bezier(.2,1.35,.4,1);
 }
 .don-now[hidden]{display:none}
-@keyframes nowIn{from{opacity:0;transform:translateY(-8px) scale(.97)}to{opacity:1;transform:none}}
+.don-now > *{flex:none}
+@keyframes nowIn{from{opacity:0;transform:translateY(-8px) scale(.98)}to{opacity:1;transform:none}}
 
-/* 금액 — 흰 알약으로 확실히 떼어 놓는다 */
+/* 치즈 — 가장 눈에 띄어야 하니 채운 칸 */
 .don-now .amt{
-  background:#fff;border-radius:8px;padding:3px 11px;flex:none;
-  font-size:17px;font-weight:900;font-variant-numeric:tabular-nums;white-space:nowrap;
-  box-shadow:0 1px 0 rgba(0,0,0,.12);
+  padding:4px 13px;border-radius:9px;white-space:nowrap;
+  background:linear-gradient(100deg,#00e553,#00b840);
+  color:#052b12;font-size:17px;font-weight:900;font-variant-numeric:tabular-nums;
+  box-shadow:0 2px 10px -3px rgba(0,229,83,.6);
 }
-/* 닉네임 — 세로선으로 구분 */
+/* 닉네임 — 테두리 칸 */
 .don-now .who{
-  flex:none;max-width:12em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
-  font-size:16px;font-weight:900;letter-spacing:-.01em;
-  padding-left:12px;border-left:2px solid rgba(4,36,15,.28);
+  max-width:13em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  padding:4px 12px;border-radius:9px;
+  background:rgba(0,224,74,.12);border:1px solid rgba(0,224,74,.34);
+  color:#9dfbbd;font-size:15.5px;font-weight:900;letter-spacing:-.01em;
 }
-/* 후원 내용 — 한 톤 낮춰서 닉네임과 섞이지 않게 */
+/* 후원 내용 — 가장 차분한 칸 */
 .don-now .msg{
-  flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
-  font-size:14.5px;font-weight:700;color:rgba(4,36,15,.72);
-  padding-left:12px;border-left:2px solid rgba(4,36,15,.28);
+  flex:0 1 auto;min-width:0;max-width:26em;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  padding:4px 13px;border-radius:9px;
+  background:rgba(255,255,255,.055);border:1px solid rgba(255,255,255,.09);
+  color:#d5e9db;font-size:14.5px;font-weight:600;
 }
 .don-now .msg:empty{display:none}
+/* 진행 — 정보성이라 가장 약하게 */
 .don-now .gain{
-  flex:none;margin-left:auto;white-space:nowrap;font-variant-numeric:tabular-nums;
-  font-size:14px;background:rgba(4,36,15,.22);border-radius:8px;padding:4px 11px;
+  padding:4px 12px;border-radius:9px;white-space:nowrap;
+  background:rgba(0,0,0,.32);border:1px solid rgba(0,224,74,.2);
+  color:rgba(157,251,189,.78);font-size:13.5px;font-weight:800;
+  font-variant-numeric:tabular-nums;
 }
 
 .don-idle{
